@@ -65,10 +65,11 @@ export default function CatalogoPage() {
     [products, query, category]
   )
 
-  // Lucro do revendedor = preço sugerido - 15% comissão - R$ 4,00 taxa fixa
+  // Lucro do revendedor = preço sugerido - 15% comissão - R$ 4,00 taxa fixa - custo da peça
   function profit(p) {
     const price = Number(p.suggested_price || 0)
-    return price - price * COMISSAO - TAXA_FIXA
+    const cost = Number(p.base_cost || 0)
+    return price - price * COMISSAO - TAXA_FIXA - cost
   }
 
   function makeAd(p) {
