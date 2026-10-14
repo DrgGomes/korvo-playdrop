@@ -7,13 +7,13 @@ import { supabase } from '@/lib/supabaseClient'
 import { BRAND } from '@/lib/brand'
 import {
   LayoutDashboard, Shirt, ShoppingCart, TrendingUp, Wallet,
-  Package, BarChart3, RotateCcw, User, Shield, LogOut, Settings,
+  Package, BarChart3, RotateCcw, User, LogOut,
 } from 'lucide-react'
 
 const NAV = [
   { href: '/dashboard', label: 'Início', icon: LayoutDashboard },
   { href: '/dashboard/catalogo', label: 'Catálogo', icon: Shirt },
-  { href: '/dashboard/pedido', label: 'Pedido', icon: ShoppingCart },
+  { href: '/dashboard/carrinho', label: 'Carrinho', icon: ShoppingCart },
   { href: '/dashboard/vendas', label: 'Vendas', icon: TrendingUp },
   { href: '/dashboard/financeiro', label: 'Financeiro', icon: Wallet },
   { href: '/dashboard/produtos', label: 'Produtos', icon: Package },
@@ -26,21 +26,9 @@ export default function Sidebar({ open, onClose }) {
   const pathname = usePathname()
   const router = useRouter()
   const [user, setUser] = useState(null)
-  const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user))
-
-    supabase.auth.getUser().then(async ({ data }) => {
-      if (data.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', data.user.id)
-          .maybeSingle()
-        setIsAdmin(profile?.role === 'admin')
-      }
-    })
   }, [])
 
   async function handleLogout() {
@@ -62,7 +50,7 @@ export default function Sidebar({ open, onClose }) {
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-                {/* Marca */}
+        {/* Marca */}
         <div className="flex h-16 items-center gap-3 border-b border-white/10 px-5">
           {BRAND.logoLightUrl || BRAND.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -98,32 +86,6 @@ export default function Sidebar({ open, onClose }) {
               </Link>
             )
           })}
-
-          {isAdmin && (
-            <>
-              <p className="px-3 pt-4 pb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Korvo</p>
-                            <Link
-                href="/dashboard/admin"
-                onClick={onClose}
-                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-                  pathname === '/dashboard/admin' ? 'bg-indigo-600 text-white shadow' : 'text-slate-300 hover:bg-white/10 hover:text-white'
-                }`}
-              >
-                <Shield size={18} />
-                Admin
-              </Link>
-              <Link
-                href="/dashboard/admin/configuracoes"
-                onClick={onClose}
-                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-                  pathname === '/dashboard/admin/configuracoes' ? 'bg-indigo-600 text-white shadow' : 'text-slate-300 hover:bg-white/10 hover:text-white'
-                }`}
-              >
-                <Settings size={18} />
-                Configurações
-              </Link>
-            </>
-          )}
         </nav>
 
         {/* Rodapé com usuário */}
