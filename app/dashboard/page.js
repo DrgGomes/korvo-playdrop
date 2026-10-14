@@ -9,6 +9,7 @@ import { PackageOpen, Plus, ArrowRight } from 'lucide-react'
 export default function DashboardPage() {
   const [user, setUser] = useState(null)
   const [orders, setOrders] = useState([])
+  const [banner, setBanner] = useState(null)
   const [loading, setLoading] = useState(true)
   const [days, setDays] = useState(30)
 
@@ -25,6 +26,17 @@ export default function DashboardPage() {
       .order('created_at', { ascending: false })
       .limit(100)
     setOrders(data ?? [])
+
+    // Banner ativo do slot dashboard (o mais recente)
+    const { data: b } = await supabase
+      .from('banners')
+      .select('*')
+      .eq('slot', 'dashboard')
+      .eq('active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+    setBanner(b?.[0] ?? null)
+
     setLoading(false)
   }
 
@@ -56,6 +68,11 @@ export default function DashboardPage() {
 
   const recent = filtered.slice(0, 8)
 
+  const bannerInner = (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={banner.image_url} alt={banner.title || 'Banner'} className="h-full w-full object-cover" />
+  )
+
   return (
     <div className="space-y-6">
       {/* Cabeçalho */}
@@ -78,6 +95,19 @@ export default function DashboardPage() {
           ))}
         </div>
       </div>
+
+      {/* ===== BANNER (dashboard) ===== */}
+      {banner && (
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+          {banner.link_url ? (
+            <Link href={banner.link_url} className="block">
+              {bannerInner}
+            </Link>
+          ) : (
+            bannerInner
+          )}
+        </div>
+      )}
 
       {/* Cards de métricas */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -110,10 +140,10 @@ export default function DashboardPage() {
                 Ver catálogo <ArrowRight size={16} />
               </Link>
               <Link
-                href="/dashboard/pedido"
+                href="/dashboard/vendas"
                 className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
               >
-                <Plus size={16} /> Criar pedido
+                <Plus size={16} /> Minhas vendas
               </Link>
             </div>
           </div>
