@@ -4,7 +4,11 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import { formatBRL } from '@/lib/utils'
-import { Search, Shirt, Copy, Check, ShoppingCart, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search, Shirt, Copy, Check, ShoppingCart, ChevronLeft, ChevronRight, Wallet } from 'lucide-react'
+
+// Regras da plataforma
+const COMISSAO = 0.15   // 15%
+const TAXA_FIXA = 4.00  // R$ 4,00
 
 export default function CatalogoPage() {
   const [products, setProducts] = useState([])
@@ -12,8 +16,6 @@ export default function CatalogoPage() {
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('todas')
-  const [selectedId, setSelectedId] = useState(null)
-  const [margin, setMargin] = useState(100)
   const [copied, setCopied] = useState(null)
   const [photoIndex, setPhotoIndex] = useState({})
 
@@ -30,7 +32,6 @@ export default function CatalogoPage() {
     const list = data ?? []
     setProducts(list)
 
-    // Busca a galeria de fotos de cada produto
     if (list.length > 0) {
       const ids = list.map((p) => p.id)
       const { data: imgs } = await supabase
@@ -64,8 +65,10 @@ export default function CatalogoPage() {
     [products, query, category]
   )
 
-  function sellingPrice(p) {
-    return Number(p.base_cost || 0) * (1 + margin / 100)
+  // Lucro do revendedor = preço sugerido - 15% comissão - R$ 4,00 taxa fixa
+  function profit(p) {
+    const price = Number(p.suggested_price || 0)
+    return price - price * COMISSAO - TAXA_FIXA
   }
 
   function makeAd(p) {
@@ -109,7 +112,7 @@ export default function CatalogoPage() {
       <div>
         <h1 className="text-2xl font-extrabold text-slate-900">Catálogo</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Escolha suas camisetas, defina seu preço e anuncie em minutos. Fotos, títulos e descrições prontos.
+          Escolha suas camisetas e anuncie em minutos. Fotos, títulos e descrições prontos.
         </p>
       </div>
 
@@ -160,13 +163,13 @@ export default function CatalogoPage() {
       {/* Grade de produtos */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {filtered.map((p) => {
-          const open = selectedId === p.id
           const photos = photosOf(p)
           const cur = photoIndex[p.id] || 0
+          const lucro = profit(p)
           return (
             <div key={p.id} className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white">
-              {/* Galeria de fotos */}
-              <div className="relative flex h-44 items-center justify-center bg-slate-100">
+              {/* Foto 250x250 */}
+              <div className="relative flex h-[250px] w-[250px] items-center justify-center self-center bg-slate-100">
                 {photos.length > 0 ? (
                   <>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -210,48 +213,24 @@ export default function CatalogoPage() {
 
                 <div className="mt-2 space-y-1 text-xs text-slate-500">
                   <p>
-                    Seu custo: <span className="font-semibold text-slate-700">{formatBRL(p.base_cost)}</span>
+                    Custo: <span className="font-semibold text-slate-700">{formatBRL(p.base_cost)}</span>
                   </p>
                   <p>
-                    Preço sugerido:{' '}
+                    Preço de venda sugerido:{' '}
                     <span className="font-semibold text-slate-700">{formatBRL(p.suggested_price)}</span>
                   </p>
                 </div>
 
-                {open ? (
-                  <div className="mt-3 rounded-xl bg-indigo-50/70 p-3">
-                    <label className="text-xs font-medium text-slate-600">Sua margem de lucro (%)</label>
-                    <input
-                      type="number"
-                      min={0}
-                      max={500}
-                      value={margin}
-                      onChange={(e) => setMargin(Number(e.target.value))}
-                      className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none focus:border-indigo-500"
-                    />
-                    <div className="mt-2 space-y-1 text-sm text-slate-700">
-                      <p>
-                        Seu preço de venda: <b>{formatBRL(sellingPrice(p))}</b>
-                      </p>
-                      <p>
-                        Lucro por peça:{' '}
-                        <b className="text-emerald-600">
-                          {formatBRL(sellingPrice(p) - Number(p.base_cost || 0))}
-                        </b>
-                      </p>
-                    </div>
+                {/* Lucro do revendedor (substitui o "Definir meu preço") */}
+                <div className="mt-3 rounded-xl bg-emerald-50/70 p-3">
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-700">
+                    <Wallet size={14} /> Seu lucro estimado por peça
                   </div>
-                ) : (
-                  <button
-                    onClick={() => {
-                      setSelectedId(p.id)
-                      setMargin(100)
-                    }}
-                    className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 transition hover:text-indigo-700"
-                  >
-                    <TrendingUp size={15} /> Definir meu preço
-                  </button>
-                )}
+                  <p className="mt-1 text-xl font-extrabold text-emerald-700">{formatBRL(lucro)}</p>
+                  <p className="mt-0.5 text-[11px] text-emerald-600/80">
+                    Já descontados 15% de comissão + R$ 4,00 de taxa fixa
+                  </p>
+                </div>
 
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <button
