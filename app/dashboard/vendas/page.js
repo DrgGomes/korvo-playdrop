@@ -147,8 +147,13 @@ export default function VendasPage() {
               <tbody>
                 {filtered.map((o) => (
                   <tr key={o.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50">
-                    <td className="px-6 py-3 font-semibold text-indigo-600">
-                      {o.order_number || o.id.slice(0, 8)}
+                                        <td className="px-6 py-3">
+                      <Link
+                        href={`/dashboard/pedido/${o.id}`}
+                        className="font-semibold text-indigo-600 underline-offset-2 hover:underline"
+                      >
+                        {o.order_number || o.id.slice(0, 8)}
+                      </Link>
                     </td>
                     <td className="px-6 py-3">
                       <p className="font-medium text-slate-900">{o.customer_name || '—'}</p>
