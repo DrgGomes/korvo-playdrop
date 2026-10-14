@@ -51,13 +51,19 @@ export default function AdminAvisosPage() {
       return
     }
     setSavingNotice(true)
-    await supabase.from('notices').insert({
+    const { error } = await supabase.from('notices').insert({
       title: nTitle.trim(),
       message: nMessage.trim(),
       type: nType,
       active: true,
     })
     setSavingNotice(false)
+
+    if (error) {
+      alert('Erro ao publicar o aviso: ' + error.message)
+      return
+    }
+
     setNTitle('')
     setNMessage('')
     setNType('info')
