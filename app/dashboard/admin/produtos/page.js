@@ -3,17 +3,13 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { formatBRL } from '@/lib/utils'
-import { Plus, Pencil, Trash2, Shirt, ShieldAlert, ArrowLeft } from 'lucide-react'
+import { Plus, Pencil, Trash2, Shirt, ShieldAlert, ArrowLeft, X, ImagePlus } from 'lucide-react'
 import Link from 'next/link'
 
 const EMPTY = {
   name: '',
   category: '',
-  base_cost: '',
   suggested_price: '',
-  colors: '',
-  sizes: '',
-  image_url: '',
   description: '',
   active: true,
 }
@@ -26,6 +22,18 @@ export default function AdminProductsPage() {
   const [form, setForm] = useState(EMPTY)
   const [saving, setSaving] = useState(false)
 
+  // Configurações carregadas
+  const [colors, setColors] = useState([])
+  const [sizes, setSizes] = useState([])
+  const [costComponents, setCostComponents] = useState([])
+
+  // Seleções do formulário
+  const [selectedColors, setSelectedColors] = useState([])
+  const [selectedSizes, setSelectedSizes] = useState([])
+  const [images, setImages] = useState([])
+  const [imageInput, setImageInput] = useState('')
+  const [costs, setCosts] = useState([]) // [{component_id, name, amount}]
+
   useEffect(() => {
     load()
   }, [])
@@ -37,32 +45,84 @@ export default function AdminProductsPage() {
     setIsAdmin(profile?.role === 'admin')
 
     if (profile?.role === 'admin') {
-      const { data } = await supabase.from('products').select('*').order('name')
-      setProducts(data ?? [])
+      const [p, c, s, cc] = await Promise.all([
+        supabase.from('products').select('*').order('name'),
+        supabase.from('colors').select('*').order('name'),
+        supabase.from('sizes').select('*').order('sort_order'),
+        supabase.from('cost_components').select('*').order('created_at'),
+      ])
+      setProducts(p.data ?? [])
+      setColors(c.data ?? [])
+      setSizes(s.data ?? [])
+      setCostComponents(cc.data ?? [])
     }
   }
 
   function openNew() {
     setEditingId(null)
     setForm(EMPTY)
+    setSelectedColors([])
+    setSelectedSizes([])
+    setImages([])
+    setImageInput('')
+    setCosts(costComponents.map((c) => ({ component_id: c.id, name: c.name, amount: Number(c.default_amount || 0) })))
     setShowForm(true)
   }
 
-  function openEdit(p) {
+  async function openEdit(p) {
     setEditingId(p.id)
     setForm({
       name: p.name || '',
       category: p.category || '',
-      base_cost: p.base_cost ?? '',
       suggested_price: p.suggested_price ?? '',
-      colors: p.colors?.join(', ') || '',
-      sizes: p.sizes?.join(', ') || '',
-      image_url: p.image_url || '',
       description: p.description || '',
       active: p.active,
     })
+    setSelectedColors(p.colors || [])
+    setSelectedSizes(p.sizes || [])
+    setImages(p.images || [])
+    setImageInput('')
+    setCosts(p.cost_items || [])
     setShowForm(true)
   }
+
+  function toggleColor(name) {
+    setSelectedColors((prev) =>
+      prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name]
+    )
+  }
+
+  function toggleSize(name) {
+    setSelectedSizes((prev) =>
+      prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name]
+    )
+  }
+
+  function addImage() {
+    const url = imageInput.trim()
+    if (!url) return
+    setImages((prev) => [...prev, url])
+    setImageInput('')
+  }
+
+  function removeImage(idx) {
+    setImages((prev) => prev.filter((_, i) => i !== idx))
+  }
+
+  function setCostAmount(id, value) {
+    setCosts((prev) => prev.map((c) => (c.component_id === id ? { ...c, amount: Number(value || 0) } : c)))
+  }
+
+  function toggleCost(id) {
+    setCosts((prev) => {
+      const exists = prev.find((c) => c.component_id === id)
+      if (exists) return prev.filter((c) => c.component_id !== id)
+      const comp = costComponents.find((c) => c.id === id)
+      return [...prev, { component_id: id, name: comp.name, amount: Number(comp.default_amount || 0) }]
+    })
+  }
+
+  const totalCost = costs.reduce((s, c) => s + Number(c.amount || 0), 0)
 
   async function save(e) {
     e.preventDefault()
@@ -71,19 +131,41 @@ export default function AdminProductsPage() {
     const payload = {
       name: form.name,
       category: form.category || null,
-      base_cost: Number(form.base_cost || 0),
+      base_cost: totalCost,
       suggested_price: form.suggested_price ? Number(form.suggested_price) : null,
-      colors: form.colors ? form.colors.split(',').map((s) => s.trim()).filter(Boolean) : [],
-      sizes: form.sizes ? form.sizes.split(',').map((s) => s.trim()).filter(Boolean) : [],
-      image_url: form.image_url || null,
+      colors: selectedColors,
+      sizes: selectedSizes,
+      image_url: images[0] || null,
       description: form.description || null,
       active: form.active,
     }
 
+    let productId = editingId
+
     if (editingId) {
       await supabase.from('products').update(payload).eq('id', editingId)
+      await supabase.from('product_images').delete().eq('product_id', editingId)
+      await supabase.from('product_cost_items').delete().eq('product_id', editingId)
     } else {
-      await supabase.from('products').insert(payload)
+      const { data } = await supabase.from('products').insert(payload).select().single()
+      productId = data.id
+    }
+
+    // Galeria de imagens
+    if (images.length > 0) {
+      const imgRows = images.map((url, i) => ({ product_id: productId, image_url: url, sort_order: i }))
+      await supabase.from('product_images').insert(imgRows)
+    }
+
+    // Custos detalhados
+    if (costs.length > 0) {
+      const costRows = costs.map((c) => ({
+        product_id: productId,
+        component_id: c.component_id,
+        component_name: c.name,
+        amount: Number(c.amount || 0),
+      }))
+      await supabase.from('product_cost_items').insert(costRows)
     }
 
     setSaving(false)
@@ -123,6 +205,8 @@ export default function AdminProductsPage() {
   const inputClass =
     'w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100'
   const labelClass = 'mb-1 block text-sm font-medium text-slate-700'
+  const chipActive = 'bg-indigo-600 text-white border-indigo-600'
+  const chipIdle = 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
 
   return (
     <div className="space-y-6">
@@ -149,7 +233,8 @@ export default function AdminProductsPage() {
       {showForm && (
         <form onSubmit={save} className="rounded-2xl border border-slate-200 bg-white p-6">
           <h3 className="mb-4 font-bold text-slate-900">{editingId ? 'Editar produto' : 'Novo produto'}</h3>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            {/* Nome */}
             <div className="md:col-span-2">
               <label className={labelClass}>Nome do produto *</label>
               <input
@@ -161,6 +246,7 @@ export default function AdminProductsPage() {
               />
             </div>
 
+            {/* Categoria + preço sugerido */}
             <div>
               <label className={labelClass}>Categoria</label>
               <input
@@ -170,23 +256,8 @@ export default function AdminProductsPage() {
                 className={inputClass}
               />
             </div>
-
             <div>
-              <label className={labelClass}>Custo da peça (R$) *</label>
-              <input
-                required
-                type="number"
-                step="0.01"
-                min="0"
-                value={form.base_cost}
-                onChange={(e) => setForm({ ...form, base_cost: e.target.value })}
-                placeholder="0.00"
-                className={inputClass}
-              />
-            </div>
-
-            <div>
-              <label className={labelClass}>Preço sugerido (R$)</label>
+              <label className={labelClass}>Preço sugerido de venda (R$)</label>
               <input
                 type="number"
                 step="0.01"
@@ -198,36 +269,160 @@ export default function AdminProductsPage() {
               />
             </div>
 
-            <div>
-              <label className={labelClass}>URL da foto</label>
-              <input
-                value={form.image_url}
-                onChange={(e) => setForm({ ...form, image_url: e.target.value })}
-                placeholder="https://..."
-                className={inputClass}
-              />
+            {/* Cores por clique */}
+            <div className="md:col-span-2">
+              <label className={labelClass}>Cores (clique para selecionar)</label>
+              {colors.length === 0 ? (
+                <p className="text-sm text-slate-400">
+                  Nenhuma cor cadastrada. Adicione em Admin → Configurações.
+                </p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {colors.map((c) => (
+                    <button
+                      type="button"
+                      key={c.id}
+                      onClick={() => toggleColor(c.name)}
+                      className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
+                        selectedColors.includes(c.name) ? chipActive : chipIdle
+                      }`}
+                    >
+                      {c.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {selectedColors.length > 0 && (
+                <p className="mt-2 text-xs text-slate-500">Selecionadas: {selectedColors.join(', ')}</p>
+              )}
             </div>
 
-            <div>
-              <label className={labelClass}>Cores (separadas por vírgula)</label>
-              <input
-                value={form.colors}
-                onChange={(e) => setForm({ ...form, colors: e.target.value })}
-                placeholder="Branca, Preta, Vermelha"
-                className={inputClass}
-              />
+            {/* Tamanhos por clique */}
+            <div className="md:col-span-2">
+              <label className={labelClass}>Tamanhos (clique para selecionar)</label>
+              {sizes.length === 0 ? (
+                <p className="text-sm text-slate-400">
+                  Nenhum tamanho cadastrado. Adicione em Admin → Configurações.
+                </p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {sizes.map((s) => (
+                    <button
+                      type="button"
+                      key={s.id}
+                      onClick={() => toggleSize(s.name)}
+                      className={`rounded-xl border px-4 py-1.5 text-sm font-semibold transition ${
+                        selectedSizes.includes(s.name) ? chipActive : chipIdle
+                      }`}
+                    >
+                      {s.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {selectedSizes.length > 0 && (
+                <p className="mt-2 text-xs text-slate-500">Selecionados: {selectedSizes.join(', ')}</p>
+              )}
             </div>
 
-            <div>
-              <label className={labelClass}>Tamanhos (separados por vírgula)</label>
-              <input
-                value={form.sizes}
-                onChange={(e) => setForm({ ...form, sizes: e.target.value })}
-                placeholder="P, M, G, GG"
-                className={inputClass}
-              />
+            {/* Custos */}
+            <div className="md:col-span-2">
+              <label className={labelClass}>Custos do produto (selecione os que entram)</label>
+              {costComponents.length === 0 ? (
+                <p className="text-sm text-slate-400">
+                  Nenhum custo cadastrado. Adicione em Admin → Configurações (ex.: Camiseta, Embalagem, DTF).
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {costComponents.map((comp) => {
+                    const selected = costs.find((c) => c.component_id === comp.id)
+                    return (
+                      <div
+                        key={comp.id}
+                        className={`flex items-center gap-3 rounded-xl border p-3 transition ${
+                          selected ? 'border-indigo-300 bg-indigo-50/50' : 'border-slate-200'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={!!selected}
+                          onChange={() => toggleCost(comp.id)}
+                          className="h-4 w-4 rounded border-slate-300 text-indigo-600"
+                        />
+                        <span className="flex-1 text-sm font-medium text-slate-800">{comp.name}</span>
+                        {selected && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-slate-400">R$</span>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={selected.amount}
+                              onChange={(e) => setCostAmount(comp.id, e.target.value)}
+                              className="w-24 rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-indigo-500"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+              <div className="mt-3 flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
+                <span className="text-sm font-medium text-slate-600">Custo total do produto</span>
+                <span className="text-lg font-extrabold text-indigo-700">{formatBRL(totalCost)}</span>
+              </div>
             </div>
 
+            {/* Galeria de imagens */}
+            <div className="md:col-span-2">
+              <label className={labelClass}>Fotos do produto (várias)</label>
+              <div className="flex gap-2">
+                <input
+                  value={imageInput}
+                  onChange={(e) => setImageInput(e.target.value)}
+                  placeholder="Cole a URL da foto e clique em Adicionar"
+                  className={inputClass}
+                />
+                <button
+                  type="button"
+                  onClick={addImage}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-slate-800 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-900"
+                >
+                  <ImagePlus size={15} /> Adicionar
+                </button>
+              </div>
+
+              {images.length === 0 ? (
+                <p className="mt-2 text-xs text-slate-400">
+                  Nenhuma foto adicionada. A primeira foto é a capa do produto.
+                </p>
+              ) : (
+                <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-4">
+                  {images.map((url, idx) => (
+                    <div key={idx} className="group relative overflow-hidden rounded-xl border border-slate-200">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={url} alt={`Foto ${idx + 1}`} className="h-24 w-full object-cover" />
+                      {idx === 0 && (
+                        <span className="absolute left-1 top-1 rounded bg-indigo-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                          Capa
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeImage(idx)}
+                        className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white hover:bg-red-600"
+                        aria-label="Remover foto"
+                      >
+                        <X size={13} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Descrição */}
             <div className="md:col-span-2">
               <label className={labelClass}>Descrição / kit de anúncio</label>
               <textarea
