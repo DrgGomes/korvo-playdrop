@@ -155,7 +155,13 @@ export default function AdminPage() {
               <tbody>
                 {recent.map((o) => (
                   <tr key={o.id} className="border-b border-slate-50 last:border-0">
-                    <td className="px-6 py-3 font-semibold text-indigo-600">{o.order_number || o.id.slice(0, 8)}</td>
+                                          <Link
+                        href={`/dashboard/pedido/${o.id}`}
+                        className="font-semibold text-indigo-600 underline-offset-2 hover:underline"
+                      >
+                        {o.order_number || o.id.slice(0, 8)}
+                      </Link>
+                    </td>
                     <td className="px-6 py-3">{o.user_id?.slice(0, 8) || '—'}</td>
                     <td className="px-6 py-3 text-slate-500">{formatDate(o.created_at)}</td>
                     <td className="px-6 py-3 font-semibold">{formatBRL(o.selling_price)}</td>
