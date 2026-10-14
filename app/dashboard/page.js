@@ -4,7 +4,11 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import { formatBRL, formatDate, orderStatusColor, orderStatusLabel } from '@/lib/utils'
-import { PackageOpen, Plus, ArrowRight } from 'lucide-react'
+import { PackageOpen, Plus, ArrowRight, TrendingUp } from 'lucide-react'
+import {
+  ResponsiveContainer, AreaChart, Area, XAxis, YAxis,
+  CartesianGrid, Tooltip,
+} from 'recharts'
 
 export default function DashboardPage() {
   const [user, setUser] = useState(null)
@@ -24,10 +28,9 @@ export default function DashboardPage() {
       .from('orders')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(100)
+      .limit(500)
     setOrders(data ?? [])
 
-    // Banner ativo do slot dashboard (o mais recente)
     const { data: b } = await supabase
       .from('banners')
       .select('*')
@@ -55,6 +58,17 @@ export default function DashboardPage() {
     const faturamento = filtered.reduce((s, o) => s + Number(o.selling_price || 0), 0)
     const custo = filtered.reduce((s, o) => s + Number(o.total_cost || 0), 0)
     return { faturamento, custo, lucro: faturamento - custo, pedidos: filtered.length }
+  }, [filtered])
+
+  // ===== Dados do gráfico: faturamento por dia =====
+  const chartData = useMemo(() => {
+    const byDay = {}
+    filtered.forEach((o) => {
+      const d = new Date(o.created_at)
+      const key = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`
+      byDay[key] = (byDay[key] || 0) + Number(o.selling_price || 0)
+    })
+    return Object.entries(byDay).map(([day, valor]) => ({ day, valor: Number(valor.toFixed(2)) }))
   }, [filtered])
 
   const firstName = user?.user_metadata?.full_name?.split(' ')[0] || 'Revendedor'
@@ -91,7 +105,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ===== BANNER (só renderiza se existir) ===== */}
+      {/* Banner */}
       {banner && (
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
           {banner.link_url ? (
@@ -109,7 +123,7 @@ export default function DashboardPage() {
       {/* Cards de métricas */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {cards.map((c) => (
-          <div key={c.label} className="rounded-2xl border border-slate-200 bg-white p-5">
+          <div key={c.label} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <p className="text-sm font-medium text-slate-500">{c.label}</p>
             <p className="mt-2 text-2xl font-extrabold text-slate-900">{c.value}</p>
             <span className="mt-2 inline-block text-lg">{c.icon}</span>
@@ -117,7 +131,72 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Estado vazio / gráfico */}
+      {/* ===== GRÁFICO DE VENDAS ===== */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+              <TrendingUp size={18} />
+            </span>
+            <div>
+              <h3 className="font-bold text-slate-900">Vendas por dia</h3>
+              <p className="text-xs text-slate-400">Últimos {days} dias</p>
+            </div>
+          </div>
+        </div>
+
+        {chartData.length === 0 ? (
+          <p className="py-12 text-center text-sm text-slate-400">
+            Quando houver pedidos no período, o gráfico aparece aqui.
+          </p>
+        ) : (
+          <div className="h-72 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="corVendas" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#6366f1" stopOpacity={0.4} />
+                    <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                <XAxis
+                  dataKey="day"
+                  tick={{ fontSize: 12, fill: '#94a3b8' }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fontSize: 12, fill: '#94a3b8' }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(v) => (v >= 1000 ? `R$ ${(v / 1000).toFixed(1)}k` : `R$ ${v}`)}
+                />
+                <Tooltip
+                  formatter={(v) => [formatBRL(v), 'Faturamento']}
+                  contentStyle={{
+                    borderRadius: 12,
+                    border: '1px solid #e2e8f0',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
+                    fontSize: 13,
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="valor"
+                  stroke="#6366f1"
+                  strokeWidth={2.5}
+                  fill="url(#corVendas)"
+                  dot={{ r: 3, fill: '#6366f1', strokeWidth: 0 }}
+                  activeDot={{ r: 5 }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
+
+      {/* Estado vazio */}
       <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-white p-8 text-center">
         {orders.length === 0 ? (
           <div className="flex flex-col items-center">
@@ -144,15 +223,11 @@ export default function DashboardPage() {
               </Link>
             </div>
           </div>
-        ) : (
-          <p className="text-sm text-slate-500">
-            O gráfico de vendas por dia aparecerá aqui assim que houver pedidos no período selecionado.
-          </p>
-        )}
+        ) : null}
       </div>
 
       {/* Pedidos recentes */}
-      <div className="rounded-2xl border border-slate-200 bg-white">
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
           <h3 className="font-bold text-slate-900">Pedidos recentes</h3>
           <Link href="/dashboard/vendas" className="text-sm font-medium text-indigo-600 hover:text-indigo-700">
