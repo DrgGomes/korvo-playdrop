@@ -12,8 +12,10 @@ export default function DashboardLayout({ children }) {
   const pathname = usePathname()
   const router = useRouter()
 
+  const isAdminArea = pathname?.startsWith('/dashboard/admin')
+
   useEffect(() => {
-    // Se estiver na área do admin, o layout do admin cuida de tudo — não checa aqui
+    // Área do admin tem layout próprio — nada a checar aqui
     if (pathname?.startsWith('/dashboard/admin')) {
       setChecking(false)
       return
@@ -40,6 +42,11 @@ export default function DashboardLayout({ children }) {
     }
 
     setChecking(false)
+  }
+
+  // ===== ÁREA DO ADMIN: renderiza SÓ o conteúdo, sem Sidebar/Topbar do cliente =====
+  if (isAdminArea) {
+    return <>{children}</>
   }
 
   if (checking) {
