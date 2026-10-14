@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabaseClient'
 import { BRAND } from '@/lib/brand'
 import {
   LayoutDashboard, Shirt, ShoppingCart, TrendingUp, Wallet,
-  Package, BarChart3, RotateCcw, User, Shield, LogOut,
+  Package, BarChart3, RotateCcw, User, Shield, LogOut, Settings,
 } from 'lucide-react'
 
 const NAV = [
@@ -102,7 +102,7 @@ export default function Sidebar({ open, onClose }) {
           {isAdmin && (
             <>
               <p className="px-3 pt-4 pb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Korvo</p>
-              <Link
+                            <Link
                 href="/dashboard/admin"
                 onClick={onClose}
                 className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
@@ -111,6 +111,16 @@ export default function Sidebar({ open, onClose }) {
               >
                 <Shield size={18} />
                 Admin
+              </Link>
+              <Link
+                href="/dashboard/admin/configuracoes"
+                onClick={onClose}
+                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+                  pathname === '/dashboard/admin/configuracoes' ? 'bg-indigo-600 text-white shadow' : 'text-slate-300 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                <Settings size={18} />
+                Configurações
               </Link>
             </>
           )}
