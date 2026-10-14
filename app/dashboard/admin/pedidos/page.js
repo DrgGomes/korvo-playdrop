@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { formatBRL, formatDate, orderStatusLabel } from '@/lib/utils'
 import {
-  Search, ShoppingCart, FileText, Truck, Eye, X, Download, User, Wallet,
+  Search, ShoppingCart, FileText, Truck, Eye, X, Download, User, Wallet, Printer,
 } from 'lucide-react'
 
 const ALL_STATUS = [
@@ -403,6 +403,12 @@ export default function AdminPedidosPage() {
             </section>
 
             {/* Financeiro */}
+<button
+              onClick={() => window.open(`/dashboard/cupom?id=${viewOrder.id}`, '_blank')}
+              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+            >
+              <Printer size={16} /> Imprimir cupom do pedido
+            </button>
             <div className="mt-5 rounded-xl bg-slate-50 p-4">
               <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-400">
                 <Wallet size={13} /> Financeiro
