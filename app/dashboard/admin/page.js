@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabaseClient'
 import { formatBRL, formatDate, orderStatusLabel } from '@/lib/utils'
 import { ShieldAlert, Package, ShoppingCart, Truck, CheckCircle2, ArrowRight } from 'lucide-react'
 
-const ALL_STATUS = ['novo', 'em_producao', 'enviado', 'entregue', 'cancelado', 'devolucao']
+const ALL_STATUS = ['novo', 'em_producao', 'em_separacao', 'separado', 'enviado', 'entregue', 'cancelado', 'devolucao']
 
 export default function AdminPage() {
   const [isAdmin, setIsAdmin] = useState(null)
@@ -65,7 +65,7 @@ export default function AdminPage() {
     )
   }
 
-  const counts = { novo: 0, em_producao: 0, enviado: 0, entregue: 0 }
+  const counts = { novo: 0, em_producao: 0, em_separacao: 0, separado: 0, enviado: 0, entregue: 0 }
   orders.forEach((o) => {
     if (counts[o.status] !== undefined) counts[o.status]++
   })
@@ -76,6 +76,8 @@ export default function AdminPage() {
   const cards = [
     { label: 'Pedidos novos', value: counts.novo, icon: ShoppingCart, color: 'bg-blue-50 text-blue-600' },
     { label: 'Em produção', value: counts.em_producao, icon: Truck, color: 'bg-amber-50 text-amber-600' },
+    { label: 'Em separação', value: counts.em_separacao, icon: Package, color: 'bg-orange-50 text-orange-600' },
+    { label: 'Separados', value: counts.separado, icon: Package, color: 'bg-cyan-50 text-cyan-600' },
     { label: 'Enviados', value: counts.enviado, icon: Truck, color: 'bg-violet-50 text-violet-600' },
     { label: 'Entregues', value: counts.entregue, icon: CheckCircle2, color: 'bg-emerald-50 text-emerald-600' },
   ]
@@ -96,7 +98,7 @@ export default function AdminPage() {
       </div>
 
       {/* Cards */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         {cards.map((c) => {
           const Icon = c.icon
           return (
@@ -133,7 +135,7 @@ export default function AdminPage() {
       <div className="rounded-2xl border border-slate-200 bg-white">
         <div className="border-b border-slate-100 px-6 py-4">
           <h3 className="font-bold text-slate-900">Pipeline de pedidos</h3>
-          <p className="text-sm text-slate-500">Mude o status conforme produz, envia e entrega.</p>
+          <p className="text-sm text-slate-500">Mude o status conforme produz, separa, envia e entrega.</p>
         </div>
 
         {recent.length === 0 ? (
@@ -155,7 +157,8 @@ export default function AdminPage() {
               <tbody>
                 {recent.map((o) => (
                   <tr key={o.id} className="border-b border-slate-50 last:border-0">
-                                          <Link
+                    <td className="px-6 py-3">
+                      <Link
                         href={`/dashboard/pedido/${o.id}`}
                         className="font-semibold text-indigo-600 underline-offset-2 hover:underline"
                       >
