@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
 import Topbar from '@/components/Topbar'
 import { supabase } from '@/lib/supabaseClient'
@@ -9,11 +9,17 @@ import { supabase } from '@/lib/supabaseClient'
 export default function DashboardLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [checking, setChecking] = useState(true)
+  const pathname = usePathname()
   const router = useRouter()
 
   useEffect(() => {
+    // Se estiver na área do admin, o layout do admin cuida de tudo — não checa aqui
+    if (pathname?.startsWith('/dashboard/admin')) {
+      setChecking(false)
+      return
+    }
     check()
-  }, [])
+  }, [pathname])
 
   async function check() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -22,7 +28,6 @@ export default function DashboardLayout({ children }) {
       return
     }
 
-    // Se for admin, manda direto para o painel administrativo
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
@@ -37,7 +42,6 @@ export default function DashboardLayout({ children }) {
     setChecking(false)
   }
 
-  // Enquanto verifica o perfil, mostra tela em branco (evita piscar o painel do cliente)
   if (checking) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
