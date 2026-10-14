@@ -6,13 +6,25 @@ import { supabase } from '@/lib/supabaseClient'
 
 export default function Topbar({ onMenu }) {
   const [user, setUser] = useState(null)
+  const [role, setRole] = useState('revendedor')
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUser(data.user))
+    supabase.auth.getUser().then(async ({ data }) => {
+      setUser(data.user)
+      if (data.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', data.user.id)
+          .maybeSingle()
+        setRole(profile?.role || 'revendedor')
+      }
+    })
   }, [])
 
   const name = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Revendedor'
   const initial = name?.[0]?.toUpperCase() ?? 'P'
+  const roleLabel = role === 'admin' ? 'Admin' : 'Revendedor'
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-slate-200 bg-white px-4 lg:px-8">
@@ -44,7 +56,7 @@ export default function Topbar({ onMenu }) {
           </div>
           <div className="hidden leading-tight sm:block">
             <p className="text-sm font-semibold text-slate-800">{name}</p>
-            <p className="text-xs text-slate-400">Revendedor</p>
+            <p className="text-xs text-slate-400">{roleLabel}</p>
           </div>
         </div>
       </div>
