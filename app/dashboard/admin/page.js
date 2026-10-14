@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import { formatBRL } from '@/lib/utils'
 import {
-  ShoppingCart, Package, Truck, CheckCircle2, ArrowRight, Wallet, TrendingUp,
+  ShoppingCart, Package, Truck, CheckCircle2, ArrowRight, Wallet, TrendingUp, Settings,
 } from 'lucide-react'
 
 export default function AdminDashboard() {
