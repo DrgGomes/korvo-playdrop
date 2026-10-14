@@ -68,11 +68,6 @@ export default function DashboardPage() {
 
   const recent = filtered.slice(0, 8)
 
-  const bannerInner = (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={banner.image_url} alt={banner.title || 'Banner'} className="h-full w-full object-cover" />
-  )
-
   return (
     <div className="space-y-6">
       {/* Cabeçalho */}
@@ -96,15 +91,17 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ===== BANNER (dashboard) ===== */}
+      {/* ===== BANNER (só renderiza se existir) ===== */}
       {banner && (
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
           {banner.link_url ? (
             <Link href={banner.link_url} className="block">
-              {bannerInner}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={banner.image_url} alt={banner.title || 'Banner'} className="w-full h-auto object-cover" />
             </Link>
           ) : (
-            bannerInner
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={banner.image_url} alt={banner.title || 'Banner'} className="w-full h-auto object-cover" />
           )}
         </div>
       )}
