@@ -61,13 +61,17 @@ export default function Sidebar({ open, onClose }) {
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        {/* Marca — SÓ a logo, sem texto */}
-        <div className="flex h-16 items-center border-b border-white/10 px-5">
+                {/* Marca — SÓ a logo, maior e bem visível */}
+        <div className="flex h-24 items-center justify-center border-b border-white/10 px-4">
           {BRAND.logoLightUrl || BRAND.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={BRAND.logoLightUrl || BRAND.logoUrl} alt="PlayDrop" className="h-9 w-auto" />
+            <img
+              src={BRAND.logoLightUrl || BRAND.logoUrl}
+              alt="PlayDrop"
+              className="max-h-16 w-auto object-contain"
+            />
           ) : (
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-base font-extrabold text-white">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-xl font-extrabold text-white">
               P
             </div>
           )}
