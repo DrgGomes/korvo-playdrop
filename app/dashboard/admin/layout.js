@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import {
   LayoutDashboard, Package, ShoppingCart, BarChart3, Settings,
-  LogOut, Shield, Menu, X,
+  LogOut, Shield, Menu, X, ChevronLeft, ChevronRight,
 } from 'lucide-react'
 
 const MENU = [
@@ -20,8 +20,15 @@ const MENU = [
 export default function AdminLayout({ children }) {
   const [isAdmin, setIsAdmin] = useState(null)
   const [open, setOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
+
+  // Lembra se o menu estava recolhido ou aberto
+  useEffect(() => {
+    const saved = localStorage.getItem('playdrop-admin-collapsed')
+    if (saved === '1') setCollapsed(true)
+  }, [])
 
   useEffect(() => {
     check()
@@ -45,6 +52,14 @@ export default function AdminLayout({ children }) {
     setIsAdmin(true)
   }
 
+  function toggleCollapse() {
+    setCollapsed((c) => {
+      const next = !c
+      localStorage.setItem('playdrop-admin-collapsed', next ? '1' : '0')
+      return next
+    })
+  }
+
   async function logout() {
     await supabase.auth.signOut()
     router.push('/login')
@@ -58,63 +73,96 @@ export default function AdminLayout({ children }) {
     )
   }
 
-  const SidebarContent = (
-    <div className="flex h-full flex-col">
-      <div className="flex items-center gap-2 px-5 py-5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 font-black text-white">
-          P
+  function renderSidebar(forceExpanded = false) {
+    const isCollapsed = !forceExpanded && collapsed
+    return (
+      <div className="flex h-full flex-col">
+        {/* Logo */}
+        <div className={`flex items-center gap-2 px-5 py-5 ${isCollapsed ? 'justify-center px-0' : ''}`}>
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-600 font-black text-white">
+            P
+          </div>
+          {!isCollapsed && (
+            <div className="leading-tight">
+              <p className="text-sm font-extrabold text-white">PlayDrop</p>
+              <p className="text-[11px] text-slate-400">by Korvo Ecossistema</p>
+            </div>
+          )}
         </div>
-        <div className="leading-tight">
-          <p className="text-sm font-extrabold text-white">PlayDrop</p>
-          <p className="text-[11px] text-slate-400">by Korvo Ecossistema</p>
+
+        {!isCollapsed && (
+          <div className="mt-2 flex items-center gap-2 px-5">
+            <span className="inline-flex items-center gap-1 rounded-full bg-indigo-500/20 px-2.5 py-1 text-[11px] font-semibold text-indigo-300">
+              <Shield size={12} /> Área Admin
+            </span>
+          </div>
+        )}
+
+        {/* Menu */}
+        <nav className={`mt-4 flex-1 space-y-1 ${isCollapsed ? 'px-2' : 'px-3'}`}>
+          {MENU.map((item) => {
+            const Icon = item.icon
+            const active = pathname === item.href
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setOpen(false)}
+                title={isCollapsed ? item.label : undefined}
+                className={`flex items-center gap-3 rounded-xl text-sm font-medium transition ${
+                  isCollapsed ? 'justify-center px-0 py-3' : 'px-3 py-2.5'
+                } ${
+                  active
+                    ? 'bg-indigo-600 text-white shadow'
+                    : 'text-slate-300 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                <Icon size={18} className="shrink-0" />
+                {!isCollapsed && item.label}
+              </Link>
+            )
+          })}
+        </nav>
+
+        {/* Rodapé: recolher + sair */}
+        <div className="border-t border-white/10 p-3">
+          <button
+            onClick={toggleCollapse}
+            title={isCollapsed ? 'Expandir menu' : 'Recolher menu'}
+            className={`flex w-full items-center gap-3 rounded-xl text-sm font-medium text-slate-400 transition hover:bg-white/10 hover:text-white ${
+              isCollapsed ? 'justify-center px-0 py-2.5' : 'px-3 py-2.5'
+            }`}
+          >
+            {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+            {!isCollapsed && 'Recolher'}
+          </button>
+          <button
+            onClick={logout}
+            title={isCollapsed ? 'Sair' : undefined}
+            className={`mt-1 flex w-full items-center gap-3 rounded-xl text-sm font-medium text-slate-400 transition hover:bg-white/10 hover:text-white ${
+              isCollapsed ? 'justify-center px-0 py-2.5' : 'px-3 py-2.5'
+            }`}
+          >
+            <LogOut size={18} className="shrink-0" />
+            {!isCollapsed && 'Sair'}
+          </button>
         </div>
       </div>
-
-      <div className="mt-2 flex items-center gap-2 px-5">
-        <span className="inline-flex items-center gap-1 rounded-full bg-indigo-500/20 px-2.5 py-1 text-[11px] font-semibold text-indigo-300">
-          <Shield size={12} /> Área Admin
-        </span>
-      </div>
-
-      <nav className="mt-4 flex-1 space-y-1 px-3">
-        {MENU.map((item) => {
-          const Icon = item.icon
-          const active = pathname === item.href
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setOpen(false)}
-              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-                active ? 'bg-indigo-600 text-white shadow' : 'text-slate-300 hover:bg-white/10 hover:text-white'
-              }`}
-            >
-              <Icon size={18} />
-              {item.label}
-            </Link>
-          )
-        })}
-      </nav>
-
-      <div className="border-t border-white/10 p-3">
-        <button
-          onClick={logout}
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-400 transition hover:bg-white/10 hover:text-white"
-        >
-          <LogOut size={18} /> Sair
-        </button>
-      </div>
-    </div>
-  )
+    )
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Sidebar desktop */}
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 bg-slate-900 lg:block">
-        {SidebarContent}
+      {/* Sidebar desktop (recolhe) */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 hidden bg-slate-900 transition-all duration-200 lg:block ${
+          collapsed ? 'w-20' : 'w-64'
+        }`}
+      >
+        {renderSidebar()}
       </aside>
 
-      {/* Sidebar mobile */}
+      {/* Sidebar mobile (sempre aberta no drawer) */}
       {open && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/60" onClick={() => setOpen(false)} />
@@ -126,13 +174,13 @@ export default function AdminLayout({ children }) {
             >
               <X size={20} />
             </button>
-            {SidebarContent}
+            {renderSidebar(true)}
           </aside>
         </div>
       )}
 
       {/* Conteúdo */}
-      <div className="lg:pl-64">
+      <div className={collapsed ? 'lg:pl-20' : 'lg:pl-64'}>
         {/* Topbar admin */}
         <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-slate-200 bg-white px-4 lg:px-8">
           <button
