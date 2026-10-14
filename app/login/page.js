@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
+import { BRAND } from '@/lib/brand'
 import { ArrowRight } from 'lucide-react'
 
 export default function LoginPage() {
@@ -46,12 +47,22 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-950 via-slate-900 to-slate-950 p-4">
       <div className="w-full max-w-md">
-        <div className="flex flex-col items-center text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 font-extrabold text-white shadow-lg shadow-indigo-900/50">
-            P
-          </div>
-          <h1 className="mt-4 text-2xl font-extrabold text-white">PlayDrop</h1>
-          <p className="text-sm font-medium text-indigo-300">by Korvo Ecossistema</p>
+                <div className="flex flex-col items-center text-center">
+          {BRAND.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={BRAND.logoUrl} alt="PlayDrop by Korvo Ecossistema" className="h-16 w-auto" />
+          ) : (
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 font-extrabold text-white shadow-lg shadow-indigo-900/50">
+              P
+            </div>
+          )}
+          {BRAND.mascoteUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={BRAND.mascoteUrl} alt="Mascote PlayDrop" className="mt-6 h-24 w-auto" />
+          ) : (
+            <h1 className="mt-6 text-2xl font-extrabold text-white">PlayDrop</h1>
+          )}
+          <p className="mt-1 text-sm font-medium text-indigo-300">by Korvo Ecossistema</p>
         </div>
 
         <div className="mt-8 rounded-2xl bg-white p-8 shadow-2xl">
