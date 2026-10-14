@@ -58,7 +58,7 @@ export default function LoginPage() {
           )}
           {BRAND.mascoteUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={BRAND.mascoteUrl} alt="Mascote PlayDrop" className="mt-6 h-24 w-auto" />
+            <img src={BRAND.mascoteUrl} alt="Mascote PlayDrop" className="mt-6 h-44 w-auto" />
           ) : (
             <h1 className="mt-6 text-2xl font-extrabold text-white">PlayDrop</h1>
           )}
