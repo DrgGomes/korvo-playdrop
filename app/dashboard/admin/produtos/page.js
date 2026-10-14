@@ -22,17 +22,15 @@ export default function AdminProductsPage() {
   const [form, setForm] = useState(EMPTY)
   const [saving, setSaving] = useState(false)
 
-  // Configurações carregadas
   const [colors, setColors] = useState([])
   const [sizes, setSizes] = useState([])
   const [costComponents, setCostComponents] = useState([])
 
-  // Seleções do formulário
   const [selectedColors, setSelectedColors] = useState([])
   const [selectedSizes, setSelectedSizes] = useState([])
   const [images, setImages] = useState([])
   const [imageInput, setImageInput] = useState('')
-  const [costs, setCosts] = useState([]) // [{component_id, name, amount}]
+  const [costs, setCosts] = useState([])
 
   useEffect(() => {
     load()
@@ -69,6 +67,7 @@ export default function AdminProductsPage() {
     setShowForm(true)
   }
 
+  // ===== CORRIGIDO: carrega fotos e custos salvos ao editar =====
   async function openEdit(p) {
     setEditingId(p.id)
     setForm({
@@ -80,9 +79,27 @@ export default function AdminProductsPage() {
     })
     setSelectedColors(p.colors || [])
     setSelectedSizes(p.sizes || [])
-    setImages(p.images || [])
+
+    // Busca as fotos da galeria deste produto
+    const { data: imgs } = await supabase
+      .from('product_images')
+      .select('image_url')
+      .eq('product_id', p.id)
+      .order('sort_order')
+    setImages((imgs ?? []).map((i) => i.image_url))
     setImageInput('')
-    setCosts(p.cost_items || [])
+
+    // Busca os custos detalhados deste produto
+    const { data: costRows } = await supabase
+      .from('product_cost_items')
+      .select('component_id, component_name, amount')
+      .eq('product_id', p.id)
+    setCosts((costRows ?? []).map((c) => ({
+      component_id: c.component_id,
+      name: c.component_name,
+      amount: Number(c.amount || 0),
+    })))
+
     setShowForm(true)
   }
 
@@ -151,13 +168,11 @@ export default function AdminProductsPage() {
       productId = data.id
     }
 
-    // Galeria de imagens
     if (images.length > 0) {
       const imgRows = images.map((url, i) => ({ product_id: productId, image_url: url, sort_order: i }))
       await supabase.from('product_images').insert(imgRows)
     }
 
-    // Custos detalhados
     if (costs.length > 0) {
       const costRows = costs.map((c) => ({
         product_id: productId,
@@ -229,12 +244,10 @@ export default function AdminProductsPage() {
         </button>
       </div>
 
-      {/* Formulário */}
       {showForm && (
         <form onSubmit={save} className="rounded-2xl border border-slate-200 bg-white p-6">
           <h3 className="mb-4 font-bold text-slate-900">{editingId ? 'Editar produto' : 'Novo produto'}</h3>
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-            {/* Nome */}
             <div className="md:col-span-2">
               <label className={labelClass}>Nome do produto *</label>
               <input
@@ -246,7 +259,6 @@ export default function AdminProductsPage() {
               />
             </div>
 
-            {/* Categoria + preço sugerido */}
             <div>
               <label className={labelClass}>Categoria</label>
               <input
@@ -269,13 +281,10 @@ export default function AdminProductsPage() {
               />
             </div>
 
-            {/* Cores por clique */}
             <div className="md:col-span-2">
               <label className={labelClass}>Cores (clique para selecionar)</label>
               {colors.length === 0 ? (
-                <p className="text-sm text-slate-400">
-                  Nenhuma cor cadastrada. Adicione em Admin → Configurações.
-                </p>
+                <p className="text-sm text-slate-400">Nenhuma cor cadastrada. Adicione em Admin → Configurações.</p>
               ) : (
                 <div className="flex flex-wrap gap-2">
                   {colors.map((c) => (
@@ -297,13 +306,10 @@ export default function AdminProductsPage() {
               )}
             </div>
 
-            {/* Tamanhos por clique */}
             <div className="md:col-span-2">
               <label className={labelClass}>Tamanhos (clique para selecionar)</label>
               {sizes.length === 0 ? (
-                <p className="text-sm text-slate-400">
-                  Nenhum tamanho cadastrado. Adicione em Admin → Configurações.
-                </p>
+                <p className="text-sm text-slate-400">Nenhum tamanho cadastrado. Adicione em Admin → Configurações.</p>
               ) : (
                 <div className="flex flex-wrap gap-2">
                   {sizes.map((s) => (
@@ -325,13 +331,10 @@ export default function AdminProductsPage() {
               )}
             </div>
 
-            {/* Custos */}
             <div className="md:col-span-2">
               <label className={labelClass}>Custos do produto (selecione os que entram)</label>
               {costComponents.length === 0 ? (
-                <p className="text-sm text-slate-400">
-                  Nenhum custo cadastrado. Adicione em Admin → Configurações (ex.: Camiseta, Embalagem, DTF).
-                </p>
+                <p className="text-sm text-slate-400">Nenhum custo cadastrado. Adicione em Admin → Configurações.</p>
               ) : (
                 <div className="space-y-2">
                   {costComponents.map((comp) => {
@@ -374,7 +377,6 @@ export default function AdminProductsPage() {
               </div>
             </div>
 
-            {/* Galeria de imagens */}
             <div className="md:col-span-2">
               <label className={labelClass}>Fotos do produto (várias)</label>
               <div className="flex gap-2">
@@ -394,9 +396,7 @@ export default function AdminProductsPage() {
               </div>
 
               {images.length === 0 ? (
-                <p className="mt-2 text-xs text-slate-400">
-                  Nenhuma foto adicionada. A primeira foto é a capa do produto.
-                </p>
+                <p className="mt-2 text-xs text-slate-400">Nenhuma foto adicionada. A primeira foto é a capa do produto.</p>
               ) : (
                 <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-4">
                   {images.map((url, idx) => (
@@ -422,7 +422,6 @@ export default function AdminProductsPage() {
               )}
             </div>
 
-            {/* Descrição */}
             <div className="md:col-span-2">
               <label className={labelClass}>Descrição / kit de anúncio</label>
               <textarea
@@ -464,7 +463,6 @@ export default function AdminProductsPage() {
         </form>
       )}
 
-      {/* Lista */}
       {products.length === 0 && !showForm ? (
         <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-white px-6 py-14 text-center">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
