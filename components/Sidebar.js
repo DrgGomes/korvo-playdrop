@@ -26,9 +26,20 @@ export default function Sidebar({ open, onClose }) {
   const pathname = usePathname()
   const router = useRouter()
   const [user, setUser] = useState(null)
+  const [banner, setBanner] = useState(null)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user))
+
+    // Banner da sidebar (desktop)
+    supabase
+      .from('banners')
+      .select('*')
+      .eq('slot', 'sidebar')
+      .eq('active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .then(({ data: b }) => setBanner(b?.[0] ?? null))
   }, [])
 
   async function handleLogout() {
@@ -50,8 +61,8 @@ export default function Sidebar({ open, onClose }) {
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        {/* Marca */}
-        <div className="flex h-16 items-center gap-3 border-b border-white/10 px-5">
+        {/* Marca — SÓ a logo, sem texto */}
+        <div className="flex h-16 items-center border-b border-white/10 px-5">
           {BRAND.logoLightUrl || BRAND.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={BRAND.logoLightUrl || BRAND.logoUrl} alt="PlayDrop" className="h-9 w-auto" />
@@ -60,10 +71,6 @@ export default function Sidebar({ open, onClose }) {
               P
             </div>
           )}
-          <div className="leading-tight">
-            <p className="text-sm font-extrabold tracking-wide">PlayDrop</p>
-            <p className="text-[11px] font-medium text-indigo-300">by Korvo Ecossistema</p>
-          </div>
         </div>
 
         {/* Navegação */}
@@ -87,6 +94,23 @@ export default function Sidebar({ open, onClose }) {
             )
           })}
         </nav>
+
+        {/* Banner da sidebar — só desktop */}
+        {banner && (
+          <div className="hidden px-4 pb-2 lg:block">
+            {banner.link_url ? (
+              <Link href={banner.link_url} className="block overflow-hidden rounded-xl border border-white/10">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={banner.image_url} alt={banner.title || 'Banner'} className="h-[144px] w-[218px] object-cover" />
+              </Link>
+            ) : (
+              <div className="overflow-hidden rounded-xl border border-white/10">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={banner.image_url} alt={banner.title || 'Banner'} className="h-[144px] w-[218px] object-cover" />
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Rodapé com usuário */}
         <div className="border-t border-white/10 p-4">
