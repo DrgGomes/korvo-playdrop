@@ -5,15 +5,14 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import {
-  LayoutDashboard, Package, ShoppingCart, BarChart3, Settings,
+  LayoutDashboard, BarChart3, Settings,
   LogOut, Shield, Menu, X, ChevronLeft, ChevronRight,
 } from 'lucide-react'
 
+// Menu exclusivo do admin — sem nada da visão do cliente
 const MENU = [
-  { href: '/dashboard/admin', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/dashboard/admin/pedidos', label: 'Pedidos', icon: ShoppingCart },
+  { href: '/dashboard/admin', label: 'Admin', icon: LayoutDashboard },
   { href: '/dashboard/admin/relatorios', label: 'Relatórios', icon: BarChart3 },
-  { href: '/dashboard/admin/produtos', label: 'Catálogo', icon: Package },
   { href: '/dashboard/admin/configuracoes', label: 'Configurações', icon: Settings },
 ]
 
@@ -24,7 +23,6 @@ export default function AdminLayout({ children }) {
   const pathname = usePathname()
   const router = useRouter()
 
-  // Lembra se o menu estava recolhido ou aberto
   useEffect(() => {
     const saved = localStorage.getItem('playdrop-admin-collapsed')
     if (saved === '1') setCollapsed(true)
@@ -98,7 +96,6 @@ export default function AdminLayout({ children }) {
           </div>
         )}
 
-        {/* Menu */}
         <nav className={`mt-4 flex-1 space-y-1 ${isCollapsed ? 'px-2' : 'px-3'}`}>
           {MENU.map((item) => {
             const Icon = item.icon
@@ -124,7 +121,6 @@ export default function AdminLayout({ children }) {
           })}
         </nav>
 
-        {/* Rodapé: recolher + sair */}
         <div className="border-t border-white/10 p-3">
           <button
             onClick={toggleCollapse}
@@ -153,7 +149,6 @@ export default function AdminLayout({ children }) {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Sidebar desktop (recolhe) */}
       <aside
         className={`fixed inset-y-0 left-0 z-40 hidden bg-slate-900 transition-all duration-200 lg:block ${
           collapsed ? 'w-20' : 'w-64'
@@ -162,7 +157,6 @@ export default function AdminLayout({ children }) {
         {renderSidebar()}
       </aside>
 
-      {/* Sidebar mobile (sempre aberta no drawer) */}
       {open && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/60" onClick={() => setOpen(false)} />
@@ -179,9 +173,7 @@ export default function AdminLayout({ children }) {
         </div>
       )}
 
-      {/* Conteúdo */}
       <div className={collapsed ? 'lg:pl-20' : 'lg:pl-64'}>
-        {/* Topbar admin */}
         <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-slate-200 bg-white px-4 lg:px-8">
           <button
             onClick={() => setOpen(true)}
@@ -194,12 +186,6 @@ export default function AdminLayout({ children }) {
             <Shield size={18} className="text-indigo-600" />
             <span className="text-sm font-bold text-slate-800">Painel Administrativo</span>
           </div>
-          <Link
-            href="/dashboard"
-            className="ml-auto rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
-          >
-            Ver painel do cliente
-          </Link>
         </header>
 
         <main className="p-4 lg:p-8">{children}</main>
