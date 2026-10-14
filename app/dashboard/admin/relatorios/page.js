@@ -37,13 +37,17 @@ export default function AdminRelatoriosPage() {
 
   const inPeriod = useMemo(() => {
     if (period === 'all') return orders
+    if (period === 'today') {
+      const start = new Date()
+      start.setHours(0, 0, 0, 0)
+      return orders.filter((o) => new Date(o.created_at) >= start)
+    }
     const days = Number(period)
     const cutoff = new Date()
     cutoff.setDate(cutoff.getDate() - days)
     return orders.filter((o) => new Date(o.created_at) >= cutoff)
   }, [orders, period])
 
-  // Considera pedidos enviados/entregues como "realizados" no financeiro
   const realized = inPeriod.filter((o) => ['enviado', 'entregue'].includes(o.status))
 
   const faturamento = realized.reduce((s, o) => s + Number(o.selling_price || 0), 0)
@@ -52,7 +56,7 @@ export default function AdminRelatoriosPage() {
   const pedidosRealizados = realized.length
   const totalPecas = inPeriod.reduce((s, o) => s + Number(o.item_count || 0), 0)
 
-  // Ranking de produtos mais vendidos
+  // Ranking de produtos mais vendidos no período
   const ranking = useMemo(() => {
     const orderIdsInPeriod = new Set(inPeriod.map((o) => o.id))
     const agg = {}
@@ -68,7 +72,6 @@ export default function AdminRelatoriosPage() {
       .slice(0, 10)
   }, [items, inPeriod])
 
-  // Exporta CSV (separador ; para abrir direitinho no Excel BR)
   function exportCsv() {
     if (inPeriod.length === 0) return
     const header = ['Pedido', 'Data', 'Status', 'Revendedor', 'Valor venda', 'Custo', 'Peças']
@@ -89,12 +92,20 @@ export default function AdminRelatoriosPage() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `relatorio-playdrop-${period === 'all' ? 'todos' : `${period}dias`}.csv`
+    a.download = `relatorio-playdrop-${period === 'all' ? 'todos' : period === 'today' ? 'hoje' : `${period}dias`}.csv`
     a.click()
     URL.revokeObjectURL(url)
   }
 
-  const periodLabel = period === 'all' ? 'Período: todo o histórico' : `Período: últimos ${period} dias`
+  const periodLabel = period === 'all' ? 'Período: todo o histórico' : period === 'today' ? 'Período: hoje' : `Período: últimos ${period} dias`
+
+  const periods = [
+    { v: 'today', l: 'Hoje' },
+    { v: '7', l: '7 dias' },
+    { v: '30', l: '30 dias' },
+    { v: '90', l: '90 dias' },
+    { v: 'all', l: 'Todo o histórico' },
+  ]
 
   return (
     <div className="space-y-6">
@@ -102,7 +113,7 @@ export default function AdminRelatoriosPage() {
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900">Relatórios</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Acompanhe o desempenho e exporte os dados da operação.
+            Vendas do dia, dos períodos e produtos mais vendidos do seu negócio.
           </p>
         </div>
         <button
@@ -114,14 +125,8 @@ export default function AdminRelatoriosPage() {
         </button>
       </div>
 
-      {/* Filtro de período */}
       <div className="flex flex-wrap items-center gap-2">
-        {[
-          { v: '7', l: '7 dias' },
-          { v: '30', l: '30 dias' },
-          { v: '90', l: '90 dias' },
-          { v: 'all', l: 'Todo o histórico' },
-        ].map((p) => (
+        {periods.map((p) => (
           <button
             key={p.v}
             onClick={() => setPeriod(p.v)}
@@ -139,7 +144,6 @@ export default function AdminRelatoriosPage() {
         <p className="text-sm text-slate-400">Carregando relatórios...</p>
       ) : (
         <>
-          {/* Cards financeiros */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-2xl border border-slate-200 bg-white p-5">
               <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
@@ -173,10 +177,9 @@ export default function AdminRelatoriosPage() {
             </div>
           </div>
 
-          {/* Ranking de produtos */}
           <div className="rounded-2xl border border-slate-200 bg-white p-6">
             <h3 className="mb-4 flex items-center gap-2 font-bold text-slate-900">
-              <Trophy size={18} className="text-amber-500" /> Produtos mais vendidos
+              <Trophy size={18} className="text-amber-500" /> Produtos mais vendidos ({period === 'today' ? 'hoje' : period === 'all' ? 'todo o histórico' : `últimos ${period} dias`})
             </h3>
             {ranking.length === 0 ? (
               <p className="text-sm text-slate-400">Nenhuma venda no período.</p>
