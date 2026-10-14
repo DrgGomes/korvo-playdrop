@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { formatBRL } from '@/lib/utils'
 import { Shirt, ShoppingCart, ArrowRight, Check, Minus, Plus } from 'lucide-react'
 
-export default function NovoPedidoPage() {
+function NovoPedidoContent() {
   const [products, setProducts] = useState([])
   const [selectedId, setSelectedId] = useState(null)
   const [color, setColor] = useState('')
@@ -234,5 +234,13 @@ export default function NovoPedidoPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function NovoPedidoPage() {
+  return (
+    <Suspense fallback={<p className="text-sm text-slate-400">Carregando...</p>}>
+      <NovoPedidoContent />
+    </Suspense>
   )
 }
