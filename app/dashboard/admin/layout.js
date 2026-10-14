@@ -6,13 +6,14 @@ import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import {
   LayoutDashboard, BarChart3, Settings,
-  LogOut, Shield, Menu, X, ChevronLeft, ChevronRight,
+  LogOut, Shield, Menu, X, ChevronLeft, ChevronRight, Megaphone,
 } from 'lucide-react'
 
 // Menu exclusivo do admin — sem nada da visão do cliente
 const MENU = [
   { href: '/dashboard/admin', label: 'Admin', icon: LayoutDashboard },
   { href: '/dashboard/admin/relatorios', label: 'Relatórios', icon: BarChart3 },
+  { href: '/dashboard/admin/avisos', label: 'Avisos', icon: Megaphone },
   { href: '/dashboard/admin/configuracoes', label: 'Configurações', icon: Settings },
 ]
 
