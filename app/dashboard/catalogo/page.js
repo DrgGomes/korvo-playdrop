@@ -7,6 +7,7 @@ import { formatBRL } from '@/lib/utils'
 import {
   Search, Shirt, Copy, Check, ChevronLeft, ChevronRight,
   Wallet, X, Download, FileText, ShoppingCart, ClipboardList,
+  Grid3X3, Trash2, Zap,
 } from 'lucide-react'
 
 // Regras da plataforma
@@ -19,16 +20,26 @@ export default function CatalogoPage() {
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('todas')
-  const [copied, setCopied] = useState(null)        // botão "copiar anúncio" do card
-  const [copiedField, setCopiedField] = useState(null) // campo copiado no modal
+  const [copied, setCopied] = useState(null)
+  const [copiedField, setCopiedField] = useState(null)
   const [photoIndex, setPhotoIndex] = useState({})
+  const [cartCount, setCartCount] = useState(0)
 
   // Modal de material de divulgação
-  const [selected, setSelected] = useState(null)
+  const [materialProduct, setMaterialProduct] = useState(null)
   const [modalPhoto, setModalPhoto] = useState(0)
+
+  // Modal de pedido rápido (grade cores × tamanhos)
+  const [orderProduct, setOrderProduct] = useState(null)
+  const [selColors, setSelColors] = useState([])
+  const [selSizes, setSelSizes] = useState([])
+  const [qtyGrid, setQtyGrid] = useState({}) // { "Cor|Tamanho": qty }
+  const [adding, setAdding] = useState(false)
+  const [addedOk, setAddedOk] = useState(false)
 
   useEffect(() => {
     load()
+    loadCartCount()
   }, [])
 
   async function load() {
@@ -56,6 +67,16 @@ export default function CatalogoPage() {
       setImagesByProduct(map)
     }
     setLoading(false)
+  }
+
+  async function loadCartCount() {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { count } = await supabase
+      .from('cart_items')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+    setCartCount(count ?? 0)
   }
 
   const categories = useMemo(
@@ -96,7 +117,6 @@ export default function CatalogoPage() {
     return `${title}\n\n${desc}`
   }
 
-  // Ficha técnica em texto (para copiar)
   function fichaText(p) {
     return [
       p.name,
@@ -130,18 +150,116 @@ export default function CatalogoPage() {
     return imgs.length > 0 ? imgs : p.image_url ? [p.image_url] : []
   }
 
-  function openModal(p) {
-    setSelected(p)
+  // ===== MATERIAL =====
+  function openMaterial(p) {
+    setMaterialProduct(p)
     setModalPhoto(0)
+  }
+
+  // ===== PEDIDO RÁPIDO =====
+  function openOrder(p) {
+    setOrderProduct(p)
+    setSelColors([])
+    setSelSizes([])
+    setQtyGrid({})
+    setAddedOk(false)
+  }
+
+  function toggleSel(list, setList, value) {
+    if (list.includes(value)) setList(list.filter((v) => v !== value))
+    else setList([...list, value])
+  }
+
+  function setCell(color, size, value) {
+    const key = `${color}|${size}`
+    const n = Math.max(0, Math.floor(Number(value) || 0))
+    setQtyGrid((g) => ({ ...g, [key]: n }))
+  }
+
+  function fillRow(color) {
+    setQtyGrid((g) => {
+      const next = { ...g }
+      selSizes.forEach((s) => {
+        next[`${color}|${s}`] = 1
+      })
+      return next
+    })
+  }
+
+  function fillCol(size) {
+    setQtyGrid((g) => {
+      const next = { ...g }
+      selColors.forEach((c) => {
+        next[`${c}|${size}`] = 1
+      })
+      return next
+    })
+  }
+
+  function fillAll() {
+    const next = {}
+    selColors.forEach((c) => selSizes.forEach((s) => { next[`${c}|${s}`] = 1 }))
+    setQtyGrid(next)
+  }
+
+  function clearAll() {
+    setQtyGrid({})
+  }
+
+  const gridTotal = Object.values(qtyGrid).reduce((s, q) => s + Number(q || 0), 0)
+  const gridCost = orderProduct ? gridTotal * Number(orderProduct.base_cost || 0) : 0
+
+  async function addAllToCart() {
+    if (!orderProduct) return
+    const entries = Object.entries(qtyGrid).filter(([, q]) => Number(q) > 0)
+    if (entries.length === 0) {
+      alert('Preencha pelo menos uma quantidade na grade.')
+      return
+    }
+    setAdding(true)
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      alert('Faça login para adicionar ao carrinho.')
+      setAdding(false)
+      return
+    }
+
+    const rows = entries.map(([key, qty]) => {
+      const [color, size] = key.split('|')
+      return {
+        user_id: user.id,
+        product_id: orderProduct.id,
+        product_name: orderProduct.name,
+        image_url: photosOf(orderProduct)[0] || null,
+        color,
+        size,
+        quantity: Number(qty),
+        unit_cost: Number(orderProduct.base_cost || 0),
+      }
+    })
+
+    const { error } = await supabase.from('cart_items').insert(rows)
+    setAdding(false)
+
+    if (error) {
+      alert('Erro ao adicionar ao carrinho. Tente novamente.')
+      return
+    }
+
+    setAddedOk(true)
+    loadCartCount()
+    setTimeout(() => {
+      setOrderProduct(null)
+      setAddedOk(false)
+    }, 1200)
   }
 
   const CopyButton = ({ active, onClick, label, activeLabel }) => (
     <button
       onClick={onClick}
       className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
-        active
-          ? 'bg-emerald-600 text-white'
-          : 'bg-indigo-600 text-white hover:bg-indigo-700'
+        active ? 'bg-emerald-600 text-white' : 'bg-indigo-600 text-white hover:bg-indigo-700'
       }`}
     >
       {active ? <Check size={13} /> : <Copy size={13} />}
@@ -149,13 +267,29 @@ export default function CatalogoPage() {
     </button>
   )
 
+  const chipOn = 'bg-indigo-600 text-white border-indigo-600'
+  const chipOff = 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-extrabold text-slate-900">Catálogo</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Clique em um produto para abrir o material de divulgação: título, ficha, descrição e fotos para baixar.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-extrabold text-slate-900">Catálogo</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Abra o produto para ver o material de divulgação ou fazer um pedido rápido com várias cores e tamanhos.
+          </p>
+        </div>
+        <Link
+          href="/dashboard/carrinho"
+          className="relative inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
+        >
+          <ShoppingCart size={16} /> Carrinho
+          {cartCount > 0 && (
+            <span className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[11px] font-bold text-white">
+              {cartCount}
+            </span>
+          )}
+        </Link>
       </div>
 
       {/* Busca e filtros */}
@@ -210,9 +344,9 @@ export default function CatalogoPage() {
           const lucro = profit(p)
           return (
             <div key={p.id} className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white">
-              {/* Foto 250x250 — clica para abrir o material */}
+              {/* Foto 250x250 */}
               <button
-                onClick={() => openModal(p)}
+                onClick={() => openMaterial(p)}
                 className="relative flex h-[250px] w-[250px] items-center justify-center self-center bg-slate-100"
               >
                 {photos.length > 0 ? (
@@ -251,7 +385,7 @@ export default function CatalogoPage() {
               </button>
 
               <div className="flex flex-1 flex-col p-4">
-                <button onClick={() => openModal(p)} className="text-left">
+                <button onClick={() => openMaterial(p)} className="text-left">
                   <h3 className="font-bold leading-snug text-slate-900 hover:text-indigo-600">{p.name}</h3>
                 </button>
                 {p.category && (
@@ -280,18 +414,27 @@ export default function CatalogoPage() {
                   </p>
                 </div>
 
-                <div className="mt-3 grid grid-cols-2 gap-2">
+                <div className="mt-3 grid grid-cols-3 gap-2">
                   <button
-                    onClick={() => openModal(p)}
-                    className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-300 px-2 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+                    onClick={() => openMaterial(p)}
+                    className="inline-flex items-center justify-center gap-1 rounded-xl border border-slate-300 px-1.5 py-2 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-100"
+                    title="Material de divulgação"
                   >
-                    <FileText size={14} /> Material
+                    <FileText size={13} /> Material
+                  </button>
+                  <button
+                    onClick={() => openOrder(p)}
+                    className="inline-flex items-center justify-center gap-1 rounded-xl bg-indigo-600 px-1.5 py-2 text-[11px] font-semibold text-white transition hover:bg-indigo-700"
+                    title="Pedido rápido (grade de cores e tamanhos)"
+                  >
+                    <Zap size={13} /> Pedir
                   </button>
                   <Link
-                    href={`/dashboard/pedido?produto=${p.id}`}
-                    className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-2 py-2 text-xs font-semibold text-white transition hover:bg-indigo-700"
+                    href="/dashboard/carrinho"
+                    className="inline-flex items-center justify-center gap-1 rounded-xl border border-slate-300 px-1.5 py-2 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-100"
+                    title="Ver carrinho"
                   >
-                    <ShoppingCart size={14} /> Fazer pedido
+                    <ShoppingCart size={13} /> Carrinho
                   </Link>
                 </div>
               </div>
@@ -300,23 +443,22 @@ export default function CatalogoPage() {
         })}
       </div>
 
-      {/* ===== MODAL DE MATERIAL DE DIVULGAÇÃO ===== */}
-      {selected && (
+      {/* ===== MODAL: MATERIAL DE DIVULGAÇÃO ===== */}
+      {materialProduct && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
           <div className="relative max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl">
-            {/* Cabeçalho */}
             <div className="flex items-start justify-between gap-4">
               <div>
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-indigo-600">
                   <ClipboardList size={12} /> Material de divulgação
                 </span>
-                <h2 className="mt-2 text-xl font-extrabold text-slate-900">{selected.name}</h2>
-                {selected.category && (
-                  <p className="mt-0.5 text-sm font-medium text-indigo-600">{selected.category}</p>
+                <h2 className="mt-2 text-xl font-extrabold text-slate-900">{materialProduct.name}</h2>
+                {materialProduct.category && (
+                  <p className="mt-0.5 text-sm font-medium text-indigo-600">{materialProduct.category}</p>
                 )}
               </div>
               <button
-                onClick={() => setSelected(null)}
+                onClick={() => setMaterialProduct(null)}
                 className="shrink-0 rounded-full bg-slate-100 p-2 text-slate-500 transition hover:bg-slate-200"
                 aria-label="Fechar"
               >
@@ -324,35 +466,34 @@ export default function CatalogoPage() {
               </button>
             </div>
 
-            {/* Foto pequena + downloads */}
             <div className="mt-5 flex flex-col items-center">
               <div className="relative h-52 w-52">
-                {photosOf(selected).length > 0 ? (
+                {photosOf(materialProduct).length > 0 ? (
                   <>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={photosOf(selected)[modalPhoto]}
-                      alt={selected.name}
+                      src={photosOf(materialProduct)[modalPhoto]}
+                      alt={materialProduct.name}
                       className="h-full w-full rounded-2xl border border-slate-200 object-cover"
                     />
-                    {photosOf(selected).length > 1 && (
+                    {photosOf(materialProduct).length > 1 && (
                       <>
                         <button
-                          onClick={() => setModalPhoto((modalPhoto - 1 + photosOf(selected).length) % photosOf(selected).length)}
+                          onClick={() => setModalPhoto((modalPhoto - 1 + photosOf(materialProduct).length) % photosOf(materialProduct).length)}
                           className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-1.5 text-white hover:bg-black/70"
                           aria-label="Anterior"
                         >
                           <ChevronLeft size={16} />
                         </button>
                         <button
-                          onClick={() => setModalPhoto((modalPhoto + 1) % photosOf(selected).length)}
+                          onClick={() => setModalPhoto((modalPhoto + 1) % photosOf(materialProduct).length)}
                           className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-1.5 text-white hover:bg-black/70"
                           aria-label="Próxima"
                         >
                           <ChevronRight size={16} />
                         </button>
                         <span className="absolute bottom-2 right-2 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-semibold text-white">
-                          {modalPhoto + 1}/{photosOf(selected).length}
+                          {modalPhoto + 1}/{photosOf(materialProduct).length}
                         </span>
                       </>
                     )}
@@ -364,9 +505,8 @@ export default function CatalogoPage() {
                 )}
               </div>
 
-              {/* Botões de download de cada foto */}
               <div className="mt-3 flex flex-wrap justify-center gap-2">
-                {photosOf(selected).map((url, i) => (
+                {photosOf(materialProduct).map((url, i) => (
                   <a
                     key={i}
                     href={url}
@@ -381,91 +521,63 @@ export default function CatalogoPage() {
               </div>
             </div>
 
-            {/* Título sugerido */}
             <section className="mt-6">
               <div className="flex items-center justify-between gap-2">
                 <h3 className="text-xs font-bold uppercase tracking-wide text-slate-400">Título sugerido</h3>
                 <CopyButton
                   active={copiedField === 'titulo'}
-                  onClick={() => copyText(suggestedTitle(selected), 'titulo')}
+                  onClick={() => copyText(suggestedTitle(materialProduct), 'titulo')}
                   label="Copiar"
                   activeLabel="Copiado!"
                 />
               </div>
-              <p className="mt-2 rounded-xl bg-slate-50 p-3 text-sm text-slate-700">{suggestedTitle(selected)}</p>
+              <p className="mt-2 rounded-xl bg-slate-50 p-3 text-sm text-slate-700">{suggestedTitle(materialProduct)}</p>
             </section>
 
-            {/* Ficha do produto / tabela */}
             <section className="mt-5">
               <div className="flex items-center justify-between gap-2">
                 <h3 className="text-xs font-bold uppercase tracking-wide text-slate-400">Ficha do produto</h3>
                 <CopyButton
                   active={copiedField === 'ficha'}
-                  onClick={() => copyText(fichaText(selected), 'ficha')}
+                  onClick={() => copyText(fichaText(materialProduct), 'ficha')}
                   label="Copiar ficha"
                   activeLabel="Copiado!"
                 />
               </div>
-
               <div className="mt-2 rounded-xl border border-slate-200 p-3">
                 <div className="flex flex-wrap gap-1.5">
-                  {(selected.colors || []).map((c) => (
+                  {(materialProduct.colors || []).map((c) => (
                     <span key={c} className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
                       {c}
                     </span>
                   ))}
-                  {(selected.sizes || []).map((s) => (
+                  {(materialProduct.sizes || []).map((s) => (
                     <span key={s} className="rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700">
                       {s}
                     </span>
                   ))}
                 </div>
-
-                {Array.isArray(selected.medidas) && selected.medidas.length > 0 && (
-                  <div className="mt-3 overflow-x-auto rounded-xl border border-slate-200">
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500">
-                        <tr>
-                          {Object.keys(selected.medidas[0]).map((k) => (
-                            <th key={k} className="px-3 py-2">{k}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {selected.medidas.map((m, i) => (
-                          <tr key={i} className="border-t border-slate-100">
-                            {Object.values(m).map((v, j) => (
-                              <td key={j} className="px-3 py-2 text-slate-700">{v}</td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
               </div>
             </section>
 
-            {/* Descrição */}
             <section className="mt-5">
               <div className="flex items-center justify-between gap-2">
                 <h3 className="text-xs font-bold uppercase tracking-wide text-slate-400">Descrição</h3>
                 <CopyButton
                   active={copiedField === 'descricao'}
-                  onClick={() => copyText(selected.description || fallbackDesc, 'descricao')}
+                  onClick={() => copyText(materialProduct.description || fallbackDesc, 'descricao')}
                   label="Copiar"
                   activeLabel="Copiado!"
                 />
               </div>
               <p className="mt-2 whitespace-pre-line rounded-xl bg-slate-50 p-3 text-sm leading-relaxed text-slate-600">
-                {selected.description || fallbackDesc}
+                {materialProduct.description || fallbackDesc}
               </p>
             </section>
 
-            {/* Copiar anúncio completo */}
             <button
               onClick={() => {
-                copyAd(selected)
+                copyAd(materialProduct)
                 setCopiedField('anuncio')
                 setTimeout(() => setCopiedField(null), 1800)
               }}
@@ -476,10 +588,173 @@ export default function CatalogoPage() {
               {copiedField === 'anuncio' ? <Check size={16} /> : <Copy size={16} />}
               {copiedField === 'anuncio' ? 'Anúncio completo copiado!' : 'Copiar anúncio completo'}
             </button>
+          </div>
+        </div>
+      )}
 
-            <p className="mt-3 text-center text-xs text-slate-400">
-              Para fazer o pedido, use o botão “Fazer pedido” no card do produto.
-            </p>
+      {/* ===== MODAL: PEDIDO RÁPIDO (grade cores × tamanhos) ===== */}
+      {orderProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+          <div className="relative max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-amber-600">
+                  <Zap size={12} /> Pedido rápido
+                </span>
+                <h2 className="mt-2 text-xl font-extrabold text-slate-900">{orderProduct.name}</h2>
+                <p className="mt-0.5 text-sm text-slate-500">
+                  Selecione as cores e tamanhos, digite as quantidades e adicione tudo de uma vez.
+                </p>
+              </div>
+              <button
+                onClick={() => setOrderProduct(null)}
+                className="shrink-0 rounded-full bg-slate-100 p-2 text-slate-500 transition hover:bg-slate-200"
+                aria-label="Fechar"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Passo 1: cores */}
+            <section className="mt-5">
+              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">
+                1. Escolha as cores {selColors.length > 0 && <span className="text-indigo-600">({selColors.length} selecionadas)</span>}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {(orderProduct.colors || []).map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => toggleSel(selColors, setSelColors, c)}
+                    className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${selColors.includes(c) ? chipOn : chipOff}`}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            {/* Passo 2: tamanhos */}
+            <section className="mt-4">
+              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">
+                2. Escolha os tamanhos {selSizes.length > 0 && <span className="text-indigo-600">({selSizes.length} selecionados)</span>}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {(orderProduct.sizes || []).map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => toggleSel(selSizes, setSelSizes, s)}
+                    className={`rounded-xl border px-4 py-1.5 text-sm font-semibold transition ${selSizes.includes(s) ? chipOn : chipOff}`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            {/* Passo 3: grade de quantidades */}
+            {selColors.length > 0 && selSizes.length > 0 && (
+              <section className="mt-5">
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+                    3. Quantidades <span className="inline-flex items-center gap-1 text-slate-400"><Grid3X3 size={12} /> (cor × tamanho)</span>
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={fillAll}
+                      className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
+                    >
+                      Preencher tudo com 1
+                    </button>
+                    <button
+                      onClick={clearAll}
+                      className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
+                    >
+                      <Trash2 size={12} /> Limpar
+                    </button>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto rounded-xl border border-slate-200">
+                  <table className="w-full text-center text-sm">
+                    <thead>
+                      <tr className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                        <th className="px-3 py-2 text-left">Cor / Tamanho</th>
+                        {selSizes.map((s) => (
+                          <th key={s} className="px-2 py-2">
+                            {s}
+                            <button
+                              onClick={() => fillCol(s)}
+                              className="ml-1 rounded bg-slate-200 px-1 text-[10px] font-bold text-slate-600 hover:bg-slate-300"
+                              title="Preencher toda a coluna com 1"
+                            >
+                              ×1
+                            </button>
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selColors.map((c) => (
+                        <tr key={c} className="border-t border-slate-100">
+                          <td className="px-3 py-2 text-left font-semibold text-slate-800">
+                            {c}
+                            <button
+                              onClick={() => fillRow(c)}
+                              className="ml-1.5 rounded bg-slate-200 px-1 text-[10px] font-bold text-slate-600 hover:bg-slate-300"
+                              title="Preencher toda a linha com 1"
+                            >
+                              ×1
+                            </button>
+                          </td>
+                          {selSizes.map((s) => (
+                            <td key={s} className="px-2 py-2">
+                              <input
+                                type="number"
+                                min="0"
+                                value={qtyGrid[`${c}|${s}`] ?? ''}
+                                onChange={(e) => setCell(c, s, e.target.value)}
+                                placeholder="0"
+                                className="w-16 rounded-lg border border-slate-300 px-2 py-1.5 text-center text-sm font-semibold outline-none focus:border-indigo-500"
+                              />
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            )}
+
+            {/* Resumo e botão */}
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-xl bg-slate-50 p-4">
+              <div className="text-sm">
+                <p>
+                  Total: <b className="text-slate-900">{gridTotal} peça(s)</b>
+                </p>
+                <p className="text-slate-500">
+                  Total a pagar: <b className="text-indigo-700">{formatBRL(gridCost)}</b> ({formatBRL(orderProduct.base_cost)} por peça)
+                </p>
+              </div>
+              <button
+                onClick={addAllToCart}
+                disabled={adding || gridTotal === 0}
+                className={`inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-white transition ${
+                  addedOk ? 'bg-emerald-600' : 'bg-indigo-600 hover:bg-indigo-700'
+                } disabled:opacity-50`}
+              >
+                {addedOk ? (
+                  <>
+                    <Check size={16} /> Adicionado ao carrinho!
+                  </>
+                ) : (
+                  <>
+                    <ShoppingCart size={16} />
+                    {adding ? 'Adicionando...' : `Adicionar ${gridTotal > 0 ? `${gridTotal} peça(s)` : 'ao carrinho'}`}
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
