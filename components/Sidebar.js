@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
+import { BRAND } from '@/lib/brand'
 import {
   LayoutDashboard, Shirt, ShoppingCart, TrendingUp, Wallet,
   Package, BarChart3, RotateCcw, User, Shield, LogOut,
@@ -61,11 +62,16 @@ export default function Sidebar({ open, onClose }) {
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        {/* Marca */}
+                {/* Marca */}
         <div className="flex h-16 items-center gap-3 border-b border-white/10 px-5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-base font-extrabold text-white">
-            P
-          </div>
+          {BRAND.logoLightUrl || BRAND.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={BRAND.logoLightUrl || BRAND.logoUrl} alt="PlayDrop" className="h-9 w-auto" />
+          ) : (
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-base font-extrabold text-white">
+              P
+            </div>
+          )}
           <div className="leading-tight">
             <p className="text-sm font-extrabold tracking-wide">PlayDrop</p>
             <p className="text-[11px] font-medium text-indigo-300">by Korvo Ecossistema</p>
