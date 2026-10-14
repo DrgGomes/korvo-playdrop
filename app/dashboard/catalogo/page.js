@@ -4,16 +4,18 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import { formatBRL } from '@/lib/utils'
-import { Search, Shirt, Copy, Check, ShoppingCart, TrendingUp } from 'lucide-react'
+import { Search, Shirt, Copy, Check, ShoppingCart, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react'
 
 export default function CatalogoPage() {
   const [products, setProducts] = useState([])
+  const [imagesByProduct, setImagesByProduct] = useState({})
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('todas')
   const [selectedId, setSelectedId] = useState(null)
   const [margin, setMargin] = useState(100)
   const [copied, setCopied] = useState(null)
+  const [photoIndex, setPhotoIndex] = useState({})
 
   useEffect(() => {
     load()
@@ -25,7 +27,25 @@ export default function CatalogoPage() {
       .select('*')
       .eq('active', true)
       .order('name')
-    setProducts(data ?? [])
+    const list = data ?? []
+    setProducts(list)
+
+    // Busca a galeria de fotos de cada produto
+    if (list.length > 0) {
+      const ids = list.map((p) => p.id)
+      const { data: imgs } = await supabase
+        .from('product_images')
+        .select('product_id, image_url, sort_order')
+        .in('product_id', ids)
+        .order('sort_order')
+
+      const map = {}
+      ;(imgs ?? []).forEach((img) => {
+        if (!map[img.product_id]) map[img.product_id] = []
+        map[img.product_id].push(img.image_url)
+      })
+      setImagesByProduct(map)
+    }
     setLoading(false)
   }
 
@@ -67,6 +87,23 @@ export default function CatalogoPage() {
     } catch {}
   }
 
+  function photosOf(p) {
+    const imgs = imagesByProduct[p.id] || []
+    return imgs.length > 0 ? imgs : p.image_url ? [p.image_url] : []
+  }
+
+  function prevPhoto(p) {
+    const photos = photosOf(p)
+    const cur = photoIndex[p.id] || 0
+    setPhotoIndex({ ...photoIndex, [p.id]: (cur - 1 + photos.length) % photos.length })
+  }
+
+  function nextPhoto(p) {
+    const photos = photosOf(p)
+    const cur = photoIndex[p.id] || 0
+    setPhotoIndex({ ...photoIndex, [p.id]: (cur + 1) % photos.length })
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -102,10 +139,8 @@ export default function CatalogoPage() {
         </div>
       </div>
 
-      {/* Estado de carregamento */}
       {loading && <p className="text-sm text-slate-400">Carregando catálogo...</p>}
 
-      {/* Estado vazio */}
       {!loading && filtered.length === 0 && (
         <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-white px-6 py-14 text-center">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
@@ -126,12 +161,38 @@ export default function CatalogoPage() {
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {filtered.map((p) => {
           const open = selectedId === p.id
+          const photos = photosOf(p)
+          const cur = photoIndex[p.id] || 0
           return (
             <div key={p.id} className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white">
-              <div className="flex h-44 items-center justify-center bg-slate-100">
-                {p.image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" />
+              {/* Galeria de fotos */}
+              <div className="relative flex h-44 items-center justify-center bg-slate-100">
+                {photos.length > 0 ? (
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={photos[cur]} alt={p.name} className="h-full w-full object-cover" />
+                    {photos.length > 1 && (
+                      <>
+                        <button
+                          onClick={() => prevPhoto(p)}
+                          className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-1.5 text-white transition hover:bg-black/70"
+                          aria-label="Foto anterior"
+                        >
+                          <ChevronLeft size={16} />
+                        </button>
+                        <button
+                          onClick={() => nextPhoto(p)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-1.5 text-white transition hover:bg-black/70"
+                          aria-label="Próxima foto"
+                        >
+                          <ChevronRight size={16} />
+                        </button>
+                        <span className="absolute bottom-2 right-2 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-semibold text-white">
+                          {cur + 1}/{photos.length}
+                        </span>
+                      </>
+                    )}
+                  </>
                 ) : (
                   <Shirt size={42} className="text-slate-300" />
                 )}
