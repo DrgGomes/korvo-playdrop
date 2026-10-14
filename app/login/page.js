@@ -47,20 +47,12 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-950 via-slate-900 to-slate-950 p-4">
       <div className="w-full max-w-md">
-                <div className="flex flex-col items-center text-center">
-          {BRAND.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={BRAND.logoUrl} alt="PlayDrop by Korvo Ecossistema" className="h-16 w-auto" />
-          ) : (
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 font-extrabold text-white shadow-lg shadow-indigo-900/50">
-              P
-            </div>
-          )}
+        <div className="flex flex-col items-center text-center">
           {BRAND.mascoteUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={BRAND.mascoteUrl} alt="Mascote PlayDrop" className="mt-6 h-44 w-auto" />
+            <img src={BRAND.mascoteUrl} alt="Mascote PlayDrop" className="h-44 w-auto" />
           ) : (
-            <h1 className="mt-6 text-2xl font-extrabold text-white">PlayDrop</h1>
+            <h1 className="text-2xl font-extrabold text-white">PlayDrop</h1>
           )}
           <p className="mt-1 text-sm font-medium text-indigo-300">by Korvo Ecossistema</p>
         </div>
