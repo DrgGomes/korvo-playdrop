@@ -61,15 +61,15 @@ export default async function VitrinePage() {
       <header className="mx-auto max-w-5xl px-5 pb-16 pt-12 sm:pt-16">
         <div className="text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-1.5 text-xs font-semibold text-emerald-300">
-            <Sparkles size={14} /> Vagas abertas para novos revendedores este mês
+            <Sparkles size={14} /> Vagas LIMITADAS
           </div>
           <h1 className="mt-6 text-4xl font-black leading-tight tracking-tight sm:text-5xl">
-            Sua operação de revenda,
-            <span className="block text-indigo-400">do catálogo ao lucro.</span>
+            Dropshipping de,
+            <span className="block text-indigo-400">CAMISETAS ESTAMPADAS👕.</span>
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-base text-slate-400">
-            Você escolhe as peças, anuncia com o seu preço e a margem é sua.
-            A gente cuida da confecção, da estamparia e do acompanhamento de cada pedido.
+            Você escolhe os produtos do catálogo, anuncia com o seu preço e VENDE💸.
+            A gente cuida da PRODUÇÃO, ESTAMPARIA, EMABAGEM E ENVIO 🚚.
           </p>
           {maiorMargem > 0 && (
             <div className="mx-auto mt-6 inline-flex flex-wrap items-center justify-center gap-2 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-5 py-3">
@@ -101,7 +101,7 @@ export default async function VitrinePage() {
             {[
               { label: 'Em produção', done: false },
               { label: 'Estampado e pronto', done: false },
-              { label: 'Etiqueta emitida', done: false },
+              { label: 'EMABALDO E ENVIADO', done: false },
             ].map((etapa, i) => (
               <div key={i} className="flex items-center gap-3 text-sm text-slate-300">
                 <span className="flex h-5 w-5 items-center justify-center rounded-full border border-slate-700 text-[10px] font-bold text-slate-500">
@@ -126,9 +126,9 @@ export default async function VitrinePage() {
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
             { n: '01', titulo: 'Cadastre-se grátis', texto: 'Sem mensalidade e sem custo para ser revendedor.' },
-            { n: '02', titulo: 'Escolha no catálogo', texto: 'Modelos, cores e tamanhos com preço de revenda.' },
-            { n: '03', titulo: 'Monte seu pedido', texto: 'Peça à vista ou no prazo que a Korvo liberar.' },
-            { n: '04', titulo: 'Venda e lucre', texto: 'Você define o preço final. O lucro por peça é seu.' },
+            { n: '02', titulo: 'Escolha no catálogo', texto: 'Anuncie os produtos disponiveis no catálogo no Mercado Livre, Shopee etc.' },
+            { n: '03', titulo: 'VENDEU ?', texto: 'Faça o pedido dentro do Sistema dos produtos vendidos.' },
+            { n: '04', titulo: 'DEIXA COM A GENTE', texto: 'Anexe a etiqeuta e NF no pedido e deixa o resto com a gente😎.' },
           ].map((p, i) => (
             <div key={i} className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6">
               <span className="text-2xl font-black text-indigo-500/60">{p.n}</span>
@@ -142,7 +142,7 @@ export default async function VitrinePage() {
       {/* ===== CATÁLOGO ===== */}
       <section id="catalogo" className="mx-auto max-w-5xl scroll-mt-20 px-5 pb-20">
         <div className="mb-8 text-center">
-          <h2 className="text-3xl font-extrabold">Nosso catálogo</h2>
+          <h2 className="text-3xl font-extrabold">Alguns dos produtos do Nosso catálogo</h2>
           <p className="mt-2 text-sm text-slate-400">
             Modelos disponíveis e a margem aproximada de lucro por peça.
           </p>
@@ -230,10 +230,10 @@ export default async function VitrinePage() {
               { icon: Wallet, titulo: 'Custos e margem claros', texto: 'Você vê quanto lucra em cada peça antes de anunciar.' },
               { icon: ClipboardList, titulo: 'Pedidos organizados', texto: 'Do carrinho à produção, com histórico de tudo.' },
               { icon: CreditCard, titulo: 'Pagamento via PIX', texto: 'Comprovante anexado e status de aprovação em tempo real.' },
-              { icon: Palette, titulo: 'Arte personalizada', texto: 'Anexe a arte da sua estampa direto no pedido.' },
+              { icon: Palette, titulo: 'Arte personalizada', texto: 'Não copiamos, CRIAMOS cada estampa e deixamos você vender.' },
               { icon: Truck, titulo: 'Acompanhamento', texto: 'Saiba quando saiu da produção e quando chegou.' },
               { icon: Undo2, titulo: 'Devoluções justas', texto: 'Solicite devolução pelo app com histórico completo.' },
-              { icon: Headphones, titulo: 'Suporte humano', texto: 'Fala direto com a Korvo quando precisar.' },
+              { icon: Headphones, titulo: 'Suporte humano', texto: 'Fala direto com a equipe quando precisar.' },
               { icon: Package, titulo: 'Sem estoque parado', texto: 'Produção sob demanda: você vende primeiro, a gente produz.' },
             ].map((m, i) => (
               <div key={i} className="flex gap-4 rounded-2xl border border-slate-800 bg-slate-950/60 p-5">
@@ -254,7 +254,7 @@ export default async function VitrinePage() {
       <section className="bg-indigo-600">
         <div className="mx-auto max-w-5xl px-5 py-16 text-center">
           <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-1.5 text-xs font-bold">
-            🔥 Vagas para novos revendedores este mês
+            🔥 Vagas LIMITADAS
           </div>
           <h2 className="mt-5 text-3xl font-extrabold">Pronto para começar a revender?</h2>
           <p className="mx-auto mt-3 max-w-md text-sm text-indigo-100">
@@ -262,12 +262,12 @@ export default async function VitrinePage() {
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <a
-              href="https://wa.me/5500000000000"
+              href="https://wa.me/5516994174280"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white px-7 font-bold text-indigo-700 transition hover:bg-indigo-50 sm:w-auto"
             >
-              <MessageCircle size={18} /> Falar com a Korvo
+              <MessageCircle size={18} /> Falar com a Equipe PlayDrop
             </a>
             <a
               href="https://korvo-playdrop.vercel.app"
