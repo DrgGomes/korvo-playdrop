@@ -44,9 +44,9 @@ export default async function VitrinePage() {
       {/* ===== HEADER FIXO ===== */}
       <nav className="sticky top-0 z-50 border-b border-white/5 bg-slate-950/80 backdrop-blur-lg">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-3">
-          <div className="flex items-center gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-base font-black">P</span>
-            <span className="text-sm font-extrabold sm:text-base">PlayDrop</span>
+                    <div className="flex items-center gap-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-playdrop.png" alt="PlayDrop" className="h-10 w-auto" />
           </div>
           <a
             href="#catalogo"
@@ -282,9 +282,10 @@ export default async function VitrinePage() {
       {/* ===== FOOTER ===== */}
       <footer className="border-t border-slate-800 bg-slate-950">
         <div className="mx-auto max-w-5xl px-5 py-8 text-center">
-          <div className="flex flex-col items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-base font-black">P</span>
-            <p className="text-xs text-slate-500">PlayDrop by Korvo Ecossistema · © 2026</p>
+                    <div className="flex flex-col items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-playdrop.png" alt="PlayDrop" className="h-12 w-auto" />
+            <p className="text-xs text-slate-500">© 2026 Korvo Ecossistema. Todos os direitos reservados.</p>
           </div>
         </div>
       </footer>
