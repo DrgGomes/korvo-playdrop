@@ -13,6 +13,8 @@ import {
 // Menu exclusivo do admin — sem nada da visão do cliente
 const MENU = [
   { href: '/dashboard/admin', label: 'Admin', icon: LayoutDashboard },
+  { href: '/dashboard/admin/pedidos', label: 'Pedidos', icon: ShoppingCart },
+  { href: '/dashboard/admin/status', label: 'Atualizar pedido', icon: PackageSearch },
   { href: '/dashboard/admin/relatorios', label: 'Relatórios', icon: BarChart3 },
   { href: '/dashboard/admin/avisos', label: 'Avisos', icon: Megaphone },
   { href: '/dashboard/admin/configuracoes', label: 'Configurações', icon: Settings },
