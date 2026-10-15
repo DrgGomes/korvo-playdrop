@@ -115,7 +115,10 @@ export default function AdminBackupPage() {
         }
       }
 
-      setImportMsg({ ok: true, text: `Restauração concluída! ${inseridos} registros repostos.` })
+      const aviso = puladas.length > 0
+        ? ` (perfis de usuário não restaurados pela tela — as contas de login são gerenciadas pelo próprio Supabase)`
+        : ''
+      setImportMsg({ ok: true, text: `Restauração concluída! ${inseridos} registros repostos.${aviso}` })
     } catch (err) {
       setImportMsg({ ok: false, text: 'Arquivo corrompido ou ilegível.' })
     }
