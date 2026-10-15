@@ -152,11 +152,11 @@ export default function CupomPage() {
         <div className="my-3 border-t border-dashed border-black/70" />
 
         {/* Número do pedido + código de barras */}
-        <div className="text-center">
-          <p className="text-[10px] uppercase tracking-widest text-black/60">Pedido</p>
-          <p className="text-xl font-extrabold tracking-wide">{number}</p>
-          <svg ref={barRef} className="mx-auto mt-1 block" />
-          <p className="mt-0.5 text-[9px] text-black/50">{number}</p>
+                <div className="text-center">
+          <p className="text-[9px] uppercase tracking-widest text-black/60">Pedido</p>
+          <p className="text-lg font-extrabold leading-tight tracking-wide">{number}</p>
+          <svg ref={barRef} className="mx-auto block h-10" />
+          <p className="mt-0.5 text-[8px] leading-none text-black/50">{number}</p>
         </div>
 
         <div className="my-3 border-t border-dashed border-black/70" />
