@@ -93,9 +93,14 @@ export default function AdminBackupPage() {
 
       let inseridos = 0
 
+      let puladas = []
       for (const tabela of TABELAS) {
         const linhas = backup[tabela]
         if (!Array.isArray(linhas) || linhas.length === 0) continue
+        if (TABELAS_SEM_RESTORE.includes(tabela)) {
+          puladas.push(tabela)
+          continue
+        }
 
         // Estratégia segura: upsert linha a linha em lotes
         for (let i = 0; i < linhas.length; i += 500) {
