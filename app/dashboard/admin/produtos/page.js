@@ -1,9 +1,8 @@
 'use client'
-
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { formatBRL } from '@/lib/utils'
-import { Plus, Pencil, Trash2, Shirt, ShieldAlert, ArrowLeft, X, ImagePlus } from 'lucide-react'
+import { Plus, Pencil, Trash2, Shirt, ShieldAlert, ArrowLeft, X, ImagePlus, Copy, Search, Globe, RotateCcw } from 'lucide-react'
 import Link from 'next/link'
 
 const EMPTY = {
@@ -12,6 +11,7 @@ const EMPTY = {
   suggested_price: '',
   description: '',
   active: true,
+  exibir_landing: false,
 }
 
 export default function AdminProductsPage() {
@@ -21,16 +21,19 @@ export default function AdminProductsPage() {
   const [editingId, setEditingId] = useState(null)
   const [form, setForm] = useState(EMPTY)
   const [saving, setSaving] = useState(false)
-
   const [colors, setColors] = useState([])
   const [sizes, setSizes] = useState([])
   const [costComponents, setCostComponents] = useState([])
-
   const [selectedColors, setSelectedColors] = useState([])
   const [selectedSizes, setSelectedSizes] = useState([])
   const [images, setImages] = useState([])
   const [imageInput, setImageInput] = useState('')
   const [costs, setCosts] = useState([])
+
+  // ===== Filtros da lista =====
+  const [search, setSearch] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('todas')
+  const [landingFilter, setLandingFilter] = useState('todos')
 
   useEffect(() => {
     load()
@@ -41,7 +44,6 @@ export default function AdminProductsPage() {
     if (!user) return
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
     setIsAdmin(profile?.role === 'admin')
-
     if (profile?.role === 'admin') {
       const [p, c, s, cc] = await Promise.all([
         supabase.from('products').select('*').order('name'),
@@ -56,6 +58,21 @@ export default function AdminProductsPage() {
     }
   }
 
+  // Categorias únicas existentes no catálogo (pro filtro)
+  const categorias = [...new Set(products.map((p) => p.category).filter(Boolean))].sort()
+
+  // Lista filtrada: busca + categoria + landing
+  const filtered = products.filter((p) => {
+    const nome = (p.name || '').toLowerCase()
+    const cat = (p.category || '').toLowerCase()
+    const termo = search.trim().toLowerCase()
+    if (termo && !nome.includes(termo) && !cat.includes(termo)) return false
+    if (categoryFilter !== 'todas' && (p.category || '') !== categoryFilter) return false
+    if (landingFilter === 'na_landing' && !p.exibir_landing) return false
+    if (landingFilter === 'fora_landing' && p.exibir_landing) return false
+    return true
+  })
+
   function openNew() {
     setEditingId(null)
     setForm(EMPTY)
@@ -67,7 +84,7 @@ export default function AdminProductsPage() {
     setShowForm(true)
   }
 
-  // ===== CORRIGIDO: carrega fotos e custos salvos ao editar =====
+  // ===== Carrega fotos e custos salvos ao editar =====
   async function openEdit(p) {
     setEditingId(p.id)
     setForm({
@@ -76,11 +93,10 @@ export default function AdminProductsPage() {
       suggested_price: p.suggested_price ?? '',
       description: p.description || '',
       active: p.active,
+      exibir_landing: p.exibir_landing || false,
     })
     setSelectedColors(p.colors || [])
     setSelectedSizes(p.sizes || [])
-
-    // Busca as fotos da galeria deste produto
     const { data: imgs } = await supabase
       .from('product_images')
       .select('image_url')
@@ -88,8 +104,6 @@ export default function AdminProductsPage() {
       .order('sort_order')
     setImages((imgs ?? []).map((i) => i.image_url))
     setImageInput('')
-
-    // Busca os custos detalhados deste produto
     const { data: costRows } = await supabase
       .from('product_cost_items')
       .select('component_id, component_name, amount')
@@ -99,8 +113,65 @@ export default function AdminProductsPage() {
       name: c.component_name,
       amount: Number(c.amount || 0),
     })))
-
     setShowForm(true)
+  }
+
+  // ===== DUPLICAR: copia produto + fotos + custos =====
+  async function duplicate(p) {
+    if (!window.confirm(`Duplicar "${p.name}"? Uma cópia será criada com o nome "${p.name} (cópia)".`)) return
+
+    const { data: novo, error } = await supabase
+      .from('products')
+      .insert({
+        name: `${p.name} (cópia)`,
+        category: p.category,
+        base_cost: p.base_cost,
+        suggested_price: p.suggested_price,
+        colors: p.colors,
+        sizes: p.sizes,
+        image_url: p.image_url,
+        description: p.description,
+        active: false, // cópia nasce inativa por segurança
+        exibir_landing: false,
+      })
+      .select()
+      .single()
+
+    if (error || !novo) {
+      window.alert('Erro ao duplicar: ' + (error?.message || 'tente novamente'))
+      return
+    }
+
+    // Copia as fotos da galeria
+    const { data: imgs } = await supabase
+      .from('product_images')
+      .select('image_url, sort_order')
+      .eq('product_id', p.id)
+      .order('sort_order')
+    if (imgs && imgs.length > 0) {
+      await supabase.from('product_images').insert(
+        imgs.map((i) => ({ product_id: novo.id, image_url: i.image_url, sort_order: i.sort_order }))
+      )
+    }
+
+    // Copia os custos detalhados
+    const { data: costRows } = await supabase
+      .from('product_cost_items')
+      .select('component_id, component_name, amount')
+      .eq('product_id', p.id)
+    if (costRows && costRows.length > 0) {
+      await supabase.from('product_cost_items').insert(
+        costRows.map((c) => ({ product_id: novo.id, component_id: c.component_id, component_name: c.component_name, amount: c.amount }))
+      )
+    }
+
+    load()
+  }
+
+  // ===== TOGGLE LANDING: mostra/esconde na vitrine pública =====
+  async function toggleLanding(p) {
+    await supabase.from('products').update({ exibir_landing: !p.exibir_landing }).eq('id', p.id)
+    load()
   }
 
   function toggleColor(name) {
@@ -144,7 +215,6 @@ export default function AdminProductsPage() {
   async function save(e) {
     e.preventDefault()
     setSaving(true)
-
     const payload = {
       name: form.name,
       category: form.category || null,
@@ -155,10 +225,9 @@ export default function AdminProductsPage() {
       image_url: images[0] || null,
       description: form.description || null,
       active: form.active,
+      exibir_landing: form.exibir_landing,
     }
-
     let productId = editingId
-
     if (editingId) {
       await supabase.from('products').update(payload).eq('id', editingId)
       await supabase.from('product_images').delete().eq('product_id', editingId)
@@ -167,12 +236,10 @@ export default function AdminProductsPage() {
       const { data } = await supabase.from('products').insert(payload).select().single()
       productId = data.id
     }
-
     if (images.length > 0) {
       const imgRows = images.map((url, i) => ({ product_id: productId, image_url: url, sort_order: i }))
       await supabase.from('product_images').insert(imgRows)
     }
-
     if (costs.length > 0) {
       const costRows = costs.map((c) => ({
         product_id: productId,
@@ -182,7 +249,6 @@ export default function AdminProductsPage() {
       }))
       await supabase.from('product_cost_items').insert(costRows)
     }
-
     setSaving(false)
     setShowForm(false)
     setEditingId(null)
@@ -244,6 +310,51 @@ export default function AdminProductsPage() {
         </button>
       </div>
 
+      {/* ===== BARRA DE FILTROS ===== */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-4">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center">
+          <div className="flex flex-1 items-center gap-2 rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 focus-within:border-indigo-500 focus-within:bg-white">
+            <Search size={16} className="shrink-0 text-slate-400" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por nome ou categoria..."
+              className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
+            />
+          </div>
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-indigo-500"
+          >
+            <option value="todas">Todas as categorias</option>
+            {categorias.map((cat) => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+          <select
+            value={landingFilter}
+            onChange={(e) => setLandingFilter(e.target.value)}
+            className="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-indigo-500"
+          >
+            <option value="todos">Todos</option>
+            <option value="na_landing">Na landing page</option>
+            <option value="fora_landing">Fora da landing</option>
+          </select>
+          {(search || categoryFilter !== 'todas' || landingFilter !== 'todos') && (
+            <button
+              onClick={() => { setSearch(''); setCategoryFilter('todas'); setLandingFilter('todos') }}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-3 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
+            >
+              <RotateCcw size={14} /> Limpar
+            </button>
+          )}
+        </div>
+        <p className="mt-2 text-xs text-slate-400">
+          {filtered.length} de {products.length} produto(s) exibido(s)
+        </p>
+      </div>
+
       {showForm && (
         <form onSubmit={save} className="rounded-2xl border border-slate-200 bg-white p-6">
           <h3 className="mb-4 font-bold text-slate-900">{editingId ? 'Editar produto' : 'Novo produto'}</h3>
@@ -258,7 +369,6 @@ export default function AdminProductsPage() {
                 className={inputClass}
               />
             </div>
-
             <div>
               <label className={labelClass}>Categoria</label>
               <input
@@ -280,7 +390,6 @@ export default function AdminProductsPage() {
                 className={inputClass}
               />
             </div>
-
             <div className="md:col-span-2">
               <label className={labelClass}>Cores (clique para selecionar)</label>
               {colors.length === 0 ? (
@@ -305,7 +414,6 @@ export default function AdminProductsPage() {
                 <p className="mt-2 text-xs text-slate-500">Selecionadas: {selectedColors.join(', ')}</p>
               )}
             </div>
-
             <div className="md:col-span-2">
               <label className={labelClass}>Tamanhos (clique para selecionar)</label>
               {sizes.length === 0 ? (
@@ -330,7 +438,6 @@ export default function AdminProductsPage() {
                 <p className="mt-2 text-xs text-slate-500">Selecionados: {selectedSizes.join(', ')}</p>
               )}
             </div>
-
             <div className="md:col-span-2">
               <label className={labelClass}>Custos do produto (selecione os que entram)</label>
               {costComponents.length === 0 ? (
@@ -376,7 +483,6 @@ export default function AdminProductsPage() {
                 <span className="text-lg font-extrabold text-indigo-700">{formatBRL(totalCost)}</span>
               </div>
             </div>
-
             <div className="md:col-span-2">
               <label className={labelClass}>Fotos do produto (várias)</label>
               <div className="flex gap-2">
@@ -394,7 +500,6 @@ export default function AdminProductsPage() {
                   <ImagePlus size={15} /> Adicionar
                 </button>
               </div>
-
               {images.length === 0 ? (
                 <p className="mt-2 text-xs text-slate-400">Nenhuma foto adicionada. A primeira foto é a capa do produto.</p>
               ) : (
@@ -421,7 +526,6 @@ export default function AdminProductsPage() {
                 </div>
               )}
             </div>
-
             <div className="md:col-span-2">
               <label className={labelClass}>Descrição / kit de anúncio</label>
               <textarea
@@ -432,7 +536,6 @@ export default function AdminProductsPage() {
                 className={inputClass}
               />
             </div>
-
             <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
               <input
                 type="checkbox"
@@ -442,8 +545,17 @@ export default function AdminProductsPage() {
               />
               Visível para os revendedores
             </label>
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <input
+                type="checkbox"
+                checked={form.exibir_landing}
+                onChange={(e) => setForm({ ...form, exibir_landing: e.target.checked })}
+                className="h-4 w-4 rounded border-slate-300 text-indigo-600"
+              />
+              <Globe size={15} className="shrink-0 text-indigo-600" />
+              Exibir na landing page pública
+            </label>
           </div>
-
           <div className="mt-5 flex gap-3">
             <button
               type="submit"
@@ -463,13 +575,19 @@ export default function AdminProductsPage() {
         </form>
       )}
 
-      {products.length === 0 && !showForm ? (
+      {filtered.length === 0 && !showForm ? (
         <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-white px-6 py-14 text-center">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
             <Shirt size={26} />
           </div>
-          <h2 className="mt-4 text-lg font-bold text-slate-900">Nenhum produto cadastrado</h2>
-          <p className="mt-1 text-sm text-slate-500">Clique em "Novo produto" para adicionar sua primeira camiseta.</p>
+          <h2 className="mt-4 text-lg font-bold text-slate-900">
+            {products.length === 0 ? 'Nenhum produto cadastrado' : 'Nenhum produto encontrado'}
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            {products.length === 0
+              ? 'Clique em "Novo produto" para adicionar sua primeira camiseta.'
+              : 'Tente ajustar a busca ou limpar os filtros.'}
+          </p>
         </div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
@@ -482,11 +600,12 @@ export default function AdminProductsPage() {
                   <th className="px-6 py-3">Custo</th>
                   <th className="px-6 py-3">Sugerido</th>
                   <th className="px-6 py-3">Status</th>
+                  <th className="px-6 py-3">Landing</th>
                   <th className="px-6 py-3 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody>
-                {products.map((p) => (
+                {filtered.map((p) => (
                   <tr key={p.id} className="border-b border-slate-50 last:border-0">
                     <td className="px-6 py-3">
                       <div className="flex items-center gap-3">
@@ -521,6 +640,20 @@ export default function AdminProductsPage() {
                       </button>
                     </td>
                     <td className="px-6 py-3">
+                      <button
+                        onClick={() => toggleLanding(p)}
+                        title={p.exibir_landing ? 'Clique para remover da landing' : 'Clique para exibir na landing'}
+                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold transition ${
+                          p.exibir_landing
+                            ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
+                            : 'bg-slate-200 text-slate-500 hover:bg-slate-300'
+                        }`}
+                      >
+                        <Globe size={12} />
+                        {p.exibir_landing ? 'Na landing' : 'Oculta'}
+                      </button>
+                    </td>
+                    <td className="px-6 py-3">
                       <div className="flex justify-end gap-2">
                         <button
                           onClick={() => openEdit(p)}
@@ -528,6 +661,14 @@ export default function AdminProductsPage() {
                           aria-label="Editar"
                         >
                           <Pencil size={15} />
+                        </button>
+                        <button
+                          onClick={() => duplicate(p)}
+                          className="rounded-lg border border-slate-200 p-2 text-indigo-600 transition hover:bg-indigo-50"
+                          aria-label="Duplicar"
+                          title="Duplicar produto"
+                        >
+                          <Copy size={15} />
                         </button>
                         <button
                           onClick={() => remove(p)}
