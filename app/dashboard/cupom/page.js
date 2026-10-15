@@ -58,13 +58,13 @@ export default function CupomPage() {
   const number = order?.order_number || (order ? order.id.slice(0, 8).toUpperCase() : '')
 
   // Código de barras do número do pedido
-  useEffect(() => {
-    if (barRef.current && number) {
+    useEffect(() => {
+    if (barRef.current && order) {
       try {
         JsBarcode(barRef.current, number, {
           format: 'CODE128',
-          width: 1.6,
-          height: 46,
+          width: 1.4,
+          height: 40,
           displayValue: false,
           margin: 0,
         })
