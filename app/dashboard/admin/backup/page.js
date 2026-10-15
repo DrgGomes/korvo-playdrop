@@ -25,6 +25,11 @@ const TABELAS = [
   'activities',
 ]
 
+// Tabelas que NÃO entram na restauração pela tela:
+// - profiles: protegida por RLS (cada um edita só o próprio) e as contas
+//   de login vivem no Auth do Supabase, fora do backup de dados
+const TABELAS_SEM_RESTORE = ['profiles']
+
 export default function AdminBackupPage() {
   const [exporting, setExporting] = useState(false)
   const [exportMsg, setExportMsg] = useState(null)
