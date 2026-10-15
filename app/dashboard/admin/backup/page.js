@@ -7,14 +7,22 @@ import { Database, Download, Upload, CheckCircle, XCircle, Loader2, ShieldAlert 
 // Todas as tabelas do sistema — na ordem correta pra restaurar
 const TABELAS = [
   'profiles',
+  'colors',
+  'sizes',
   'products',
+  'product_images',
+  'cost_components',
+  'product_cost_items',
+  'payments',
   'orders',
   'order_items',
   'order_attachments',
+  'returns',
   'cart_items',
   'banners',
-  'avisos',
-  'notifications',
+  'notices',
+  'announcements',
+  'activities',
 ]
 
 export default function AdminBackupPage() {
