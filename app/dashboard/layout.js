@@ -6,6 +6,9 @@ import Sidebar from '@/components/Sidebar'
 import Topbar from '@/components/Topbar'
 import { supabase } from '@/lib/supabaseClient'
 
+// Rotas que o admin pode acessar fora da área dele
+const ROTAS_LIBERADAS_ADMIN = ['/dashboard/admin', '/dashboard/cupom']
+
 export default function DashboardLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [checking, setChecking] = useState(true)
@@ -37,8 +40,12 @@ export default function DashboardLayout({ children }) {
       .maybeSingle()
 
     if (profile?.role === 'admin') {
-      router.replace('/dashboard/admin')
-      return
+      // Admin só é redirecionado se a rota NÃO estiver liberada
+      const liberada = ROTAS_LIBERADAS_ADMIN.some((r) => pathname?.startsWith(r))
+      if (!liberada) {
+        router.replace('/dashboard/admin')
+        return
+      }
     }
 
     setChecking(false)
