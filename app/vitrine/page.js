@@ -1,9 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
-import { ArrowDown, Shirt, Sparkles, TrendingUp, ShieldCheck, Package, MessageCircle } from 'lucide-react'
+import {
+  ArrowDown, Shirt, Sparkles, TrendingUp, Package, MessageCircle,
+  CheckCircle2, Palette, CreditCard, Truck, Undo2, Headphones,
+  ClipboardList, Wallet,
+} from 'lucide-react'
 
-// Cliente Supabase do lado do servidor — a anon key é pública por design,
-// e a política RLS "leitura publica de produtos da landing" só libera
-// produtos com exibir_landing = true
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -24,77 +25,126 @@ function formatBRL(v) {
   return Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
-// Margem aproximada: preço sugerido - custo base
 function margem(p) {
   if (p.suggested_price == null || p.base_cost == null) return null
   return Number(p.suggested_price) - Number(p.base_cost)
 }
 
-export const revalidate = 60 // atualiza o catálogo a cada 60s
+export const revalidate = 60
 
 export default async function VitrinePage() {
   const products = await getLandingProducts()
+  const maiorMargem = products.reduce((max, p) => {
+    const m = margem(p)
+    return m != null && m > max ? m : max
+  }, 0)
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
-      {/* ===== HERO ===== */}
-      <header className="mx-auto max-w-5xl px-5 pb-14 pt-14 text-center sm:pt-20">
-        <div className="inline-flex items-center gap-2 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-4 py-1.5 text-xs font-semibold text-indigo-300">
-          <Sparkles size={14} /> Catálogo para revendedores
+      {/* ===== HEADER FIXO ===== */}
+      <nav className="sticky top-0 z-50 border-b border-white/5 bg-slate-950/80 backdrop-blur-lg">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-3">
+          <div className="flex items-center gap-2">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-base font-black">P</span>
+            <span className="text-sm font-extrabold sm:text-base">PlayDrop</span>
+          </div>
+          <a
+            href="#catalogo"
+            className="inline-flex min-h-11 items-center rounded-xl bg-indigo-600 px-4 text-sm font-bold transition hover:bg-indigo-500"
+          >
+            Ver catálogo
+          </a>
         </div>
+      </nav>
 
-        {/* Logo */}
-        <div className="mt-8 flex items-center justify-center gap-3">
-          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-600 text-2xl font-black">
-            P
-          </span>
-          <div className="text-left">
-            <p className="text-2xl font-extrabold leading-tight">PlayDrop</p>
-            <p className="text-xs text-slate-400">by Korvo Ecossistema</p>
+      {/* ===== HERO DE RESULTADO ===== */}
+      <header className="mx-auto max-w-5xl px-5 pb-16 pt-12 sm:pt-16">
+        <div className="text-center">
+          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-1.5 text-xs font-semibold text-emerald-300">
+            <Sparkles size={14} /> Vagas abertas para novos revendedores este mês
+          </div>
+          <h1 className="mt-6 text-4xl font-black leading-tight tracking-tight sm:text-5xl">
+            Sua operação de revenda,
+            <span className="block text-indigo-400">do catálogo ao lucro.</span>
+          </h1>
+          <p className="mx-auto mt-5 max-w-xl text-base text-slate-400">
+            Você escolhe as peças, anuncia com o seu preço e a margem é sua.
+            A gente cuida da confecção, da estamparia e do acompanhamento de cada pedido.
+          </p>
+          {maiorMargem > 0 && (
+            <div className="mx-auto mt-6 inline-flex flex-wrap items-center justify-center gap-2 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-5 py-3">
+              <TrendingUp size={18} className="text-emerald-400" />
+              <span className="text-sm font-medium text-emerald-200">
+                Lucro de até <strong className="text-lg font-extrabold">{formatBRL(maiorMargem)}</strong> por peça vendida
+              </span>
+            </div>
+          )}
+          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <a href="#catalogo" className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-8 text-base font-bold transition hover:bg-indigo-500 sm:w-auto">
+              Ver catálogo <ArrowDown size={18} />
+            </a>
+            <a href="https://korvo-playdrop.vercel.app" className="inline-flex min-h-12 w-full items-center justify-center rounded-2xl border border-white/20 px-8 text-base font-bold transition hover:bg-white/10 sm:w-auto">
+              Acessar plataforma
+            </a>
           </div>
         </div>
 
-        <h1 className="mt-8 text-4xl font-black leading-tight tracking-tight sm:text-5xl">
-          Revenda camisetas estampadas
-          <span className="block text-indigo-400">com a sua marca</span>
-        </h1>
-        <p className="mx-auto mt-5 max-w-xl text-base text-slate-400">
-          Escolha os produtos no catálogo, anuncie com o seu preço e lucre em cada
-          peça. Nós cuidamos da confecção e da estamparia.
-        </p>
-        <a
-          href="#catalogo"
-          className="mt-8 inline-flex min-h-12 items-center gap-2 rounded-2xl bg-indigo-600 px-8 text-base font-bold transition hover:bg-indigo-500"
-        >
-          Ver catálogo <ArrowDown size={18} />
-        </a>
+        {/* DEMO VIVA: pedido fluindo */}
+        <div className="mx-auto mt-12 max-w-md overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/70 shadow-2xl shadow-indigo-950/40">
+          <div className="flex items-center justify-between border-b border-slate-800 px-5 py-3.5">
+            <span className="flex items-center gap-2 text-sm font-bold">
+              <ClipboardList size={16} className="text-indigo-400" /> Pedido #1042
+            </span>
+            <span className="rounded-full bg-emerald-500/15 px-2.5 py-1 text-[11px] font-bold text-emerald-300">Pago · PIX</span>
+          </div>
+          <div className="space-y-3 px-5 py-4">
+            {[
+              { label: 'Em produção', done: false },
+              { label: 'Estampado e pronto', done: false },
+              { label: 'Etiqueta emitida', done: false },
+            ].map((etapa, i) => (
+              <div key={i} className="flex items-center gap-3 text-sm text-slate-300">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full border border-slate-700 text-[10px] font-bold text-slate-500">
+                  {i + 1}
+                </span>
+                {etapa.label}
+              </div>
+            ))}
+            <div className="flex items-center gap-3 rounded-2xl bg-indigo-500/10 px-4 py-3">
+              <CheckCircle2 size={18} className="shrink-0 text-emerald-400" />
+              <p className="text-xs text-slate-300">
+                Revendedor acompanha cada etapa <strong className="text-white">em tempo real</strong> na plataforma.
+              </p>
+            </div>
+          </div>
+        </div>
       </header>
 
-      {/* ===== COMO FUNCIONA ===== */}
+      {/* ===== COMO FUNCIONA (CAMINHO DO REVENDEDOR) ===== */}
       <section className="mx-auto max-w-5xl px-5 pb-16">
-        <div className="grid gap-4 sm:grid-cols-3">
+        <h2 className="text-center text-2xl font-extrabold sm:text-3xl">Como funciona para você, revendedor</h2>
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { icon: Shirt, titulo: 'Escolha seus produtos', texto: 'Selecione os modelos que combinam com o seu público.' },
-            { icon: Package, titulo: 'Receba com sua marca', texto: 'Peças prontas para você vender e entregar.' },
-            { icon: TrendingUp, titulo: 'Venda e lucre', texto: 'Você define o preço. A margem é sua.' },
-          ].map((item, i) => (
+            { n: '01', titulo: 'Cadastre-se grátis', texto: 'Sem mensalidade e sem custo para ser revendedor.' },
+            { n: '02', titulo: 'Escolha no catálogo', texto: 'Modelos, cores e tamanhos com preço de revenda.' },
+            { n: '03', titulo: 'Monte seu pedido', texto: 'Peça à vista ou no prazo que a Korvo liberar.' },
+            { n: '04', titulo: 'Venda e lucre', texto: 'Você define o preço final. O lucro por peça é seu.' },
+          ].map((p, i) => (
             <div key={i} className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6">
-              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500/15 text-indigo-400">
-                <item.icon size={22} />
-              </span>
-              <h3 className="mt-4 font-bold">{item.titulo}</h3>
-              <p className="mt-1.5 text-sm text-slate-400">{item.texto}</p>
+              <span className="text-2xl font-black text-indigo-500/60">{p.n}</span>
+              <h3 className="mt-3 font-bold">{p.titulo}</h3>
+              <p className="mt-1.5 text-sm text-slate-400">{p.texto}</p>
             </div>
           ))}
         </div>
       </section>
 
       {/* ===== CATÁLOGO ===== */}
-      <section id="catalogo" className="mx-auto max-w-5xl scroll-mt-6 px-5 pb-20">
+      <section id="catalogo" className="mx-auto max-w-5xl scroll-mt-20 px-5 pb-20">
         <div className="mb-8 text-center">
           <h2 className="text-3xl font-extrabold">Nosso catálogo</h2>
           <p className="mt-2 text-sm text-slate-400">
-            Confira os modelos disponíveis e a margem aproximada de lucro por peça.
+            Modelos disponíveis e a margem aproximada de lucro por peça.
           </p>
         </div>
 
@@ -140,7 +190,7 @@ export default async function VitrinePage() {
                       <p className="mt-2 text-xs text-slate-500">
                         {p.colors?.length > 0 && `${p.colors.length} cores`}
                         {p.colors?.length > 0 && p.sizes?.length > 0 && ' · '}
-                        {p.sizes?.length > 0 && `P ao GG`}
+                        {p.sizes?.length > 0 && `${p.sizes.length} tamanhos`}
                       </p>
                     )}
                     {m != null && m > 0 && (
@@ -165,27 +215,65 @@ export default async function VitrinePage() {
         </p>
       </section>
 
+      {/* ===== O QUE VOCÊ CONTROLA ===== */}
+      <section className="border-y border-slate-800 bg-slate-900/40">
+        <div className="mx-auto max-w-5xl px-5 py-16">
+          <h2 className="text-center text-2xl font-extrabold sm:text-3xl">
+            Tudo que você controla na plataforma
+          </h2>
+          <p className="mx-auto mt-2 max-w-md text-center text-sm text-slate-400">
+            Não é só catálogo: é uma operação completa no seu celular.
+          </p>
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              { icon: Shirt, titulo: 'Catálogo exclusivo', texto: 'Modelos, cores, tamanhos e preços de revenda em um só lugar.' },
+              { icon: Wallet, titulo: 'Custos e margem claros', texto: 'Você vê quanto lucra em cada peça antes de anunciar.' },
+              { icon: ClipboardList, titulo: 'Pedidos organizados', texto: 'Do carrinho à produção, com histórico de tudo.' },
+              { icon: CreditCard, titulo: 'Pagamento via PIX', texto: 'Comprovante anexado e status de aprovação em tempo real.' },
+              { icon: Palette, titulo: 'Arte personalizada', texto: 'Anexe a arte da sua estampa direto no pedido.' },
+              { icon: Truck, titulo: 'Acompanhamento', texto: 'Saiba quando saiu da produção e quando chegou.' },
+              { icon: Undo2, titulo: 'Devoluções justas', texto: 'Solicite devolução pelo app com histórico completo.' },
+              { icon: Headphones, titulo: 'Suporte humano', texto: 'Fala direto com a Korvo quando precisar.' },
+              { icon: Package, titulo: 'Sem estoque parado', texto: 'Produção sob demanda: você vende primeiro, a gente produz.' },
+            ].map((m, i) => (
+              <div key={i} className="flex gap-4 rounded-2xl border border-slate-800 bg-slate-950/60 p-5">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-500/15 text-indigo-400">
+                  <m.icon size={20} />
+                </span>
+                <div>
+                  <h3 className="text-sm font-bold">{m.titulo}</h3>
+                  <p className="mt-1 text-sm text-slate-400">{m.texto}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ===== CTA FINAL ===== */}
       <section className="bg-indigo-600">
         <div className="mx-auto max-w-5xl px-5 py-16 text-center">
-          <h2 className="text-3xl font-extrabold">Pronto para começar a revender?</h2>
+          <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-1.5 text-xs font-bold">
+            🔥 Vagas para novos revendedores este mês
+          </div>
+          <h2 className="mt-5 text-3xl font-extrabold">Pronto para começar a revender?</h2>
           <p className="mx-auto mt-3 max-w-md text-sm text-indigo-100">
-            Crie sua conta na plataforma, escolha seus produtos e comece a vender hoje.
+            Crie sua conta grátis, escolha seus produtos e comece a lucrar esta semana.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <a
               href="https://wa.me/5500000000000"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex min-h-12 items-center gap-2 rounded-2xl bg-white px-7 font-bold text-indigo-700 transition hover:bg-indigo-50"
+              className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white px-7 font-bold text-indigo-700 transition hover:bg-indigo-50 sm:w-auto"
             >
               <MessageCircle size={18} /> Falar com a Korvo
             </a>
             <a
               href="https://korvo-playdrop.vercel.app"
-              className="inline-flex min-h-12 items-center gap-2 rounded-2xl border border-white/40 px-7 font-bold text-white transition hover:bg-white/10"
+              className="inline-flex min-h-12 w-full items-center justify-center rounded-2xl border border-white/40 px-7 font-bold text-white transition hover:bg-white/10 sm:w-auto"
             >
-              Acessar plataforma
+              Criar conta grátis
             </a>
           </div>
         </div>
@@ -194,13 +282,10 @@ export default async function VitrinePage() {
       {/* ===== FOOTER ===== */}
       <footer className="border-t border-slate-800 bg-slate-950">
         <div className="mx-auto max-w-5xl px-5 py-8 text-center">
-          <div className="flex items-center justify-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-600 text-sm font-black">P</span>
-            <p className="font-bold">PlayDrop <span className="text-xs font-normal text-slate-500">by Korvo Ecossistema</span></p>
+          <div className="flex flex-col items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-base font-black">P</span>
+            <p className="text-xs text-slate-500">PlayDrop by Korvo Ecossistema · © 2026</p>
           </div>
-          <p className="mt-3 text-xs text-slate-600">
-            © 2026 Korvo Ecossistema. Todos os direitos reservados.
-          </p>
         </div>
       </footer>
     </div>
