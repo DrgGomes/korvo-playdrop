@@ -44,7 +44,7 @@ export default function CupomPage() {
     setItems(its ?? [])
 
     // QR code aponta para o link deste cupom
-    QRCode.toDataURL(window.location.href, {
+    QRCode.toDataURL(`${window.location.origin}/dashboard/admin/status?id=${id}`, {
       width: 220,
       margin: 1,
       color: { dark: '#000000', light: '#ffffff' },
@@ -220,7 +220,6 @@ export default function CupomPage() {
 
         {/* Rodapé */}
         <p className="text-center text-[10px] leading-snug text-black/70">
-          Obrigado pela compra! Qualquer dúvida, fale com o revendedor que te atendeu.
         </p>
         <p className="mt-1 text-center text-[9px] text-black/50">
           PlayDrop · by Korvo Ecossistema
