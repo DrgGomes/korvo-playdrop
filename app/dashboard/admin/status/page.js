@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { formatBRL, formatDate, orderStatusLabel } from '@/lib/utils'
-import { PackageSearch, CheckCircle, XCircle, Package, Boxes, Truck } from 'lucide-react'
+import { PackageSearch, CheckCircle, XCircle, Package, Boxes, Truck, Search, X } from 'lucide-react'
 
 const ACOES = [
   { status: 'em_separacao', label: 'EM SEPARAÇÃO', icon: Boxes, cor: 'bg-amber-500 hover:bg-amber-600' },
@@ -18,24 +18,29 @@ export default function AdminStatusPage() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [msg, setMsg] = useState(null)
+  const [search, setSearch] = useState('')
+  const searchRef = useRef(null)
 
   async function load(id) {
+    const code = id.trim()
+    if (!code) return
     setLoading(true)
     setNotFound(false)
     setOrder(null)
+    setMsg(null)
 
-    // Localiza por ID (QR) ou por order_number (busca manual)
+    // Localiza por ID (QR) ou por order_number (busca/bipe)
     let { data: o } = await supabase
       .from('orders')
       .select('*')
-      .eq('id', id)
+      .eq('id', code)
       .maybeSingle()
 
     if (!o) {
       const { data: o2 } = await supabase
         .from('orders')
         .select('*')
-        .eq('order_number', id)
+        .eq('order_number', code)
         .maybeSingle()
       o = o2
     }
@@ -54,6 +59,8 @@ export default function AdminStatusPage() {
     const id = searchParams.get('id')
     if (id) load(id.trim())
     else setLoading(false)
+    // Foco automático na busca (pro bipe funcionar direto)
+    searchRef.current?.focus()
   }, [searchParams])
 
   async function updateStatus(status) {
@@ -72,6 +79,11 @@ export default function AdminStatusPage() {
     setMsg({ ok: true, text: `Status atualizado para: ${orderStatusLabel(status)}` })
   }
 
+  function submitSearch(e) {
+    e.preventDefault()
+    load(search)
+  }
+
   return (
     <div className="flex min-h-screen items-start justify-center bg-slate-900 p-4 sm:items-center">
       <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
@@ -81,15 +93,40 @@ export default function AdminStatusPage() {
           </span>
           <div>
             <h1 className="text-lg font-extrabold text-slate-900">Atualizar pedido</h1>
-            <p className="text-xs text-slate-400">Leitura pelo QR code do cupom</p>
+            <p className="text-xs text-slate-400">QR code, código de barras ou digitação</p>
           </div>
         </div>
+
+        {/* Barra de busca — digite OU bipe (Enter dispara) */}
+        <form onSubmit={submitSearch} className="mt-5">
+          <div className="flex items-center gap-2 rounded-xl border border-slate-300 bg-slate-50 px-3 py-3 focus-within:border-indigo-500 focus-within:bg-white">
+            <Search size={16} className="shrink-0 text-slate-400" />
+            <input
+              ref={searchRef}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Bipe o código ou digite o nº do pedido..."
+              className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
+              autoComplete="off"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => { setSearch(''); setOrder(null); setNotFound(false); searchRef.current?.focus() }}
+                className="shrink-0 rounded-full p-1 text-slate-400 hover:bg-slate-200"
+                aria-label="Limpar"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+        </form>
 
         {loading ? (
           <p className="py-10 text-center text-sm text-slate-400">Localizando pedido...</p>
         ) : notFound ? (
-          <div className="mt-6 rounded-xl bg-red-50 p-4 text-center text-sm text-red-600">
-            Pedido não encontrado. Confira o código escaneado.
+          <div className="mt-5 rounded-xl bg-red-50 p-4 text-center text-sm text-red-600">
+            Pedido não encontrado. Confira o código lido.
           </div>
         ) : order ? (
           <>
@@ -142,7 +179,7 @@ export default function AdminStatusPage() {
           </>
         ) : (
           <p className="py-10 text-center text-sm text-slate-400">
-            Escaneie o QR code do cupom para localizar o pedido.
+            Escaneie o QR, bipe o código de barras ou digite o número do pedido.
           </p>
         )}
       </div>
