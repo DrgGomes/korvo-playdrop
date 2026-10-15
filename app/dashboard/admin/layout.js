@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabaseClient'
 import {
   LayoutDashboard, BarChart3, Settings,
   LogOut, Shield, Menu, X, ChevronLeft, ChevronRight, Megaphone,
+  PackageSearch, ShoppingCart,
 } from 'lucide-react'
 
 // Menu exclusivo do admin — sem nada da visão do cliente
