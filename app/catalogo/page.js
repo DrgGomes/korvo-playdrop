@@ -222,7 +222,7 @@ export default function CatalogoPage() {
       {/* ===== CTA ===== */}
       <section className="bg-indigo-600">
         <div className="mx-auto max-w-6xl px-4 py-12 text-center">
-          <h2 className="text-2xl font-extrabold">Gostou de algum modelo?</h2>
+          <h2 className="text-2xl font-extrabold">Gostou dos produtos? Bora vender ?</h2>
           <p className="mx-auto mt-2 max-w-sm text-sm text-indigo-100">
             Fale com a gente pelo WhatsApp e comece a revender ainda esta semana.
           </p>
