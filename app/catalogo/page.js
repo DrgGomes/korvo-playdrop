@@ -51,9 +51,9 @@ export default function CatalogoPage() {
   }, [products])
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <div className="min-h-screen bg-black text-white">
       {/* ===== HEADER FIXO ===== */}
-      <nav className="sticky top-0 z-50 border-b border-white/5 bg-slate-950/80 backdrop-blur-lg">
+      <nav className="sticky top-0 z-50 border-b border-white/5 bg-black/80 backdrop-blur-lg">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo-playdrop.png" alt="PlayDrop" className="h-9 w-auto" />
@@ -85,7 +85,7 @@ export default function CatalogoPage() {
 
       {/* ===== BUSCA + CATEGORIAS ===== */}
       <section className="mx-auto max-w-6xl px-4 pb-4 pt-6">
-        <div className="flex items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-3 focus-within:border-indigo-500/60">
+        <div className="flex items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-3 focus-within:border-cyan-500/60">
           <Search size={18} className="shrink-0 text-slate-400" />
           <input
             value={search}
@@ -105,7 +105,7 @@ export default function CatalogoPage() {
             <button
               onClick={() => setCat('todas')}
               className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-xs font-bold transition ${
-                cat === 'todas' ? 'bg-indigo-600 text-white' : 'border border-slate-800 bg-slate-900 text-slate-300 hover:border-indigo-500/50'
+                cat === 'todas' ? 'bg-cyan-400 text-black' : 'border border-slate-800 bg-slate-900 text-slate-300 hover:border-cyan-500/50'
               }`}
             >
               Todos
@@ -115,7 +115,7 @@ export default function CatalogoPage() {
                 key={c}
                 onClick={() => setCat(c)}
                 className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-xs font-bold transition ${
-                  cat === c ? 'bg-indigo-600 text-white' : 'border border-slate-800 bg-slate-900 text-slate-300 hover:border-indigo-500/50'
+                  cat === c ? 'bg-cyan-400 text-black' : 'border border-slate-800 bg-slate-900 text-slate-300 hover:border-cyan-500/50'
                 }`}
               >
                 {c}
@@ -172,7 +172,7 @@ export default function CatalogoPage() {
               return (
                 <article
                   key={p.id}
-                  className="group flex flex-col overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/60 transition hover:border-indigo-500/50"
+                  className="group flex flex-col overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/60 transition hover:border-cyan-500/50"
                 >
                   <div className="aspect-square w-full overflow-hidden bg-slate-800">
                     {p.image_url ? (
@@ -191,7 +191,7 @@ export default function CatalogoPage() {
                   </div>
                   <div className="flex flex-1 flex-col p-3 sm:p-4">
                     {p.category && (
-                      <p className="text-[10px] font-bold uppercase tracking-wide text-indigo-400 sm:text-xs">{p.category}</p>
+                      <p className="text-[10px] font-bold uppercase tracking-wide text-cyan-400 sm:text-xs">{p.category}</p>
                     )}
                     <h3 className="mt-0.5 text-sm font-bold leading-snug sm:text-base">{p.name}</h3>
                     {(p.colors?.length > 0 || p.sizes?.length > 0) && (
@@ -220,17 +220,17 @@ export default function CatalogoPage() {
       </section>
 
       {/* ===== CTA ===== */}
-      <section className="bg-indigo-600">
+      <section className="bg-cyan-400">
         <div className="mx-auto max-w-6xl px-4 py-12 text-center">
-          <h2 className="text-2xl font-extrabold">Gostou dos produtos? Bora vender ?</h2>
-          <p className="mx-auto mt-2 max-w-sm text-sm text-indigo-100">
+          <h2 className="text-2xl font-extrabold text-black">Gostou de algum modelo?</h2>
+          <p className="mx-auto mt-2 max-w-sm text-sm font-medium text-black/70">
             Fale com a gente pelo WhatsApp e comece a revender ainda esta semana.
           </p>
           <a
             href="https://wa.me/5516994174280"
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-6 inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-white px-7 font-bold text-indigo-700 transition hover:bg-indigo-50"
+            className="mt-6 inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-black px-7 font-bold text-cyan-300 transition hover:bg-slate-900"
           >
             <MessageCircle size={18} /> Falar no WhatsApp
           </a>
@@ -238,7 +238,7 @@ export default function CatalogoPage() {
       </section>
 
       {/* ===== FOOTER ===== */}
-      <footer className="border-t border-slate-800 bg-slate-950">
+      <footer className="border-t border-slate-800 bg-black">
         <div className="mx-auto max-w-6xl px-4 py-8 text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo-playdrop.png" alt="PlayDrop" className="mx-auto h-9 w-auto" />
