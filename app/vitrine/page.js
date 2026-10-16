@@ -46,7 +46,7 @@ export default async function VitrinePage() {
         <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-3">
                     <div className="flex items-center gap-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-playdrop.png" alt="PlayDrop" className="h-10 w-auto" />
+            <img src="/logo-playdrop.png" alt="PlayDrop" className="h-16 w-auto" />
           </div>
           <a
             href="/catalogo"
