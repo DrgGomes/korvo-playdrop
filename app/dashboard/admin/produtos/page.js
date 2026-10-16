@@ -2,18 +2,17 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { formatBRL } from '@/lib/utils'
-import { Plus, Pencil, Trash2, Shirt, ShieldAlert, ArrowLeft, X, ImagePlus, Copy, Search, Globe, RotateCcw } from 'lucide-react'
+import { Plus, Pencil, Trash2, Shirt, ShieldAlert, ArrowLeft, X, ImagePlus, Copy, Search, Globe, RotateCcw, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
-
 const EMPTY = {
   name: '',
+  sku: '',
   category: '',
   suggested_price: '',
   description: '',
   active: true,
   exibir_landing: false,
 }
-
 export default function AdminProductsPage() {
   const [isAdmin, setIsAdmin] = useState(null)
   const [products, setProducts] = useState([])
@@ -29,16 +28,17 @@ export default function AdminProductsPage() {
   const [images, setImages] = useState([])
   const [imageInput, setImageInput] = useState('')
   const [costs, setCosts] = useState([])
-
   // ===== Filtros da lista =====
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('todas')
   const [landingFilter, setLandingFilter] = useState('todos')
-
+  // ===== Visualizador de fotos (lightbox) =====
+  const [lightbox, setLightbox] = useState(null) // { titulo, fotos, idx }
+  // ===== Botão IA da descrição =====
+  const [iaRodando, setIaRodando] = useState(false)
   useEffect(() => {
     load()
   }, [])
-
   async function load() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
@@ -57,22 +57,20 @@ export default function AdminProductsPage() {
       setCostComponents(cc.data ?? [])
     }
   }
-
   // Categorias únicas existentes no catálogo (pro filtro)
   const categorias = [...new Set(products.map((p) => p.category).filter(Boolean))].sort()
-
   // Lista filtrada: busca + categoria + landing
   const filtered = products.filter((p) => {
     const nome = (p.name || '').toLowerCase()
     const cat = (p.category || '').toLowerCase()
+    const sku = (p.sku || '').toLowerCase()
     const termo = search.trim().toLowerCase()
-    if (termo && !nome.includes(termo) && !cat.includes(termo)) return false
+    if (termo && !nome.includes(termo) && !cat.includes(termo) && !sku.includes(termo)) return false
     if (categoryFilter !== 'todas' && (p.category || '') !== categoryFilter) return false
     if (landingFilter === 'na_landing' && !p.exibir_landing) return false
     if (landingFilter === 'fora_landing' && p.exibir_landing) return false
     return true
   })
-
   function openNew() {
     setEditingId(null)
     setForm(EMPTY)
@@ -83,12 +81,12 @@ export default function AdminProductsPage() {
     setCosts(costComponents.map((c) => ({ component_id: c.id, name: c.name, amount: Number(c.default_amount || 0) })))
     setShowForm(true)
   }
-
   // ===== Carrega fotos e custos salvos ao editar =====
   async function openEdit(p) {
     setEditingId(p.id)
     setForm({
       name: p.name || '',
+      sku: p.sku || '',
       category: p.category || '',
       suggested_price: p.suggested_price ?? '',
       description: p.description || '',
@@ -115,11 +113,23 @@ export default function AdminProductsPage() {
     })))
     setShowForm(true)
   }
-
+  // ===== Abre a galeria completa do produto no visualizador =====
+  async function abrirGaleria(p) {
+    const { data: imgs } = await supabase
+      .from('product_images')
+      .select('image_url')
+      .eq('product_id', p.id)
+      .order('sort_order')
+    const fotos = (imgs ?? []).map((i) => i.image_url).filter(Boolean)
+    setLightbox({
+      titulo: p.name,
+      fotos: fotos.length > 0 ? fotos : [p.image_url].filter(Boolean),
+      idx: 0,
+    })
+  }
   // ===== DUPLICAR: copia produto + fotos + custos =====
   async function duplicate(p) {
     if (!window.confirm(`Duplicar "${p.name}"? Uma cópia será criada com o nome "${p.name} (cópia)".`)) return
-
     const { data: novo, error } = await supabase
       .from('products')
       .insert({
@@ -130,18 +140,17 @@ export default function AdminProductsPage() {
         colors: p.colors,
         sizes: p.sizes,
         image_url: p.image_url,
+        sku: null, // cópia nasce sem SKU para você definir um novo
         description: p.description,
         active: false, // cópia nasce inativa por segurança
         exibir_landing: false,
       })
       .select()
       .single()
-
     if (error || !novo) {
       window.alert('Erro ao duplicar: ' + (error?.message || 'tente novamente'))
       return
     }
-
     // Copia as fotos da galeria
     const { data: imgs } = await supabase
       .from('product_images')
@@ -153,7 +162,6 @@ export default function AdminProductsPage() {
         imgs.map((i) => ({ product_id: novo.id, image_url: i.image_url, sort_order: i.sort_order }))
       )
     }
-
     // Copia os custos detalhados
     const { data: costRows } = await supabase
       .from('product_cost_items')
@@ -164,43 +172,35 @@ export default function AdminProductsPage() {
         costRows.map((c) => ({ product_id: novo.id, component_id: c.component_id, component_name: c.component_name, amount: c.amount }))
       )
     }
-
     load()
   }
-
   // ===== TOGGLE LANDING: mostra/esconde na vitrine pública =====
   async function toggleLanding(p) {
     await supabase.from('products').update({ exibir_landing: !p.exibir_landing }).eq('id', p.id)
     load()
   }
-
   function toggleColor(name) {
     setSelectedColors((prev) =>
       prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name]
     )
   }
-
   function toggleSize(name) {
     setSelectedSizes((prev) =>
       prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name]
     )
   }
-
   function addImage() {
     const url = imageInput.trim()
     if (!url) return
     setImages((prev) => [...prev, url])
     setImageInput('')
   }
-
   function removeImage(idx) {
     setImages((prev) => prev.filter((_, i) => i !== idx))
   }
-
   function setCostAmount(id, value) {
     setCosts((prev) => prev.map((c) => (c.component_id === id ? { ...c, amount: Number(value || 0) } : c)))
   }
-
   function toggleCost(id) {
     setCosts((prev) => {
       const exists = prev.find((c) => c.component_id === id)
@@ -209,14 +209,45 @@ export default function AdminProductsPage() {
       return [...prev, { component_id: id, name: comp.name, amount: Number(comp.default_amount || 0) }]
     })
   }
-
   const totalCost = costs.reduce((s, c) => s + Number(c.amount || 0), 0)
-
+  // ===== IA: reescreve a descrição no padrão do Mercado Livre =====
+  async function melhorarComIa() {
+    if (!form.description.trim()) {
+      window.alert('Escreva ou cole a descrição atual primeiro — a IA reescreve a partir dela.')
+      return
+    }
+    setIaRodando(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/rewrite-description', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: 'Bearer ' + session.access_token } : {}),
+        },
+        body: JSON.stringify({
+          name: form.name,
+          description: form.description,
+          sizes: selectedSizes,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.ok) {
+        window.alert('A IA não conseguiu reescrever agora: ' + (data.error || 'tente novamente em instantes'))
+      } else {
+        setForm((f) => ({ ...f, description: data.description }))
+      }
+    } catch (e) {
+      window.alert('Falha de conexão com a IA. Tente novamente.')
+    }
+    setIaRodando(false)
+  }
   async function save(e) {
     e.preventDefault()
     setSaving(true)
     const payload = {
       name: form.name,
+      sku: form.sku ? form.sku.trim() : null,
       category: form.category || null,
       base_cost: totalCost,
       suggested_price: form.suggested_price ? Number(form.suggested_price) : null,
@@ -255,22 +286,18 @@ export default function AdminProductsPage() {
     setForm(EMPTY)
     load()
   }
-
   async function toggleActive(p) {
     await supabase.from('products').update({ active: !p.active }).eq('id', p.id)
     load()
   }
-
   async function remove(p) {
     if (!window.confirm(`Excluir "${p.name}"? Essa ação não pode ser desfeita.`)) return
     await supabase.from('products').delete().eq('id', p.id)
     load()
   }
-
   if (isAdmin === null) {
     return <p className="text-sm text-slate-400">Verificando acesso...</p>
   }
-
   if (isAdmin === false) {
     return (
       <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-white px-6 py-16 text-center">
@@ -282,13 +309,11 @@ export default function AdminProductsPage() {
       </div>
     )
   }
-
   const inputClass =
     'w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100'
   const labelClass = 'mb-1 block text-sm font-medium text-slate-700'
   const chipActive = 'bg-indigo-600 text-white border-indigo-600'
   const chipIdle = 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -309,7 +334,6 @@ export default function AdminProductsPage() {
           <Plus size={16} /> Novo produto
         </button>
       </div>
-
       {/* ===== BARRA DE FILTROS ===== */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4">
         <div className="flex flex-col gap-3 md:flex-row md:items-center">
@@ -318,7 +342,7 @@ export default function AdminProductsPage() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por nome ou categoria..."
+              placeholder="Buscar por nome, SKU ou categoria..."
               className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
             />
           </div>
@@ -354,7 +378,6 @@ export default function AdminProductsPage() {
           {filtered.length} de {products.length} produto(s) exibido(s)
         </p>
       </div>
-
       {showForm && (
         <form onSubmit={save} className="rounded-2xl border border-slate-200 bg-white p-6">
           <h3 className="mb-4 font-bold text-slate-900">{editingId ? 'Editar produto' : 'Novo produto'}</h3>
@@ -375,6 +398,15 @@ export default function AdminProductsPage() {
                 value={form.category}
                 onChange={(e) => setForm({ ...form, category: e.target.value })}
                 placeholder="Ex.: Animal, Frases, Geek..."
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>SKU (código interno)</label>
+              <input
+                value={form.sku}
+                onChange={(e) => setForm({ ...form, sku: e.target.value })}
+                placeholder="Ex.: CAM-LEAO-01"
                 className={inputClass}
               />
             </div>
@@ -506,8 +538,15 @@ export default function AdminProductsPage() {
                 <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-4">
                   {images.map((url, idx) => (
                     <div key={idx} className="group relative overflow-hidden rounded-xl border border-slate-200">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={url} alt={`Foto ${idx + 1}`} className="h-24 w-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setLightbox({ titulo: `Foto ${idx + 1}`, fotos: images, idx })}
+                        className="block w-full cursor-zoom-in"
+                        aria-label="Ampliar foto"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt={`Foto ${idx + 1}`} className="h-24 w-full object-cover" />
+                      </button>
                       {idx === 0 && (
                         <span className="absolute left-1 top-1 rounded bg-indigo-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
                           Capa
@@ -527,14 +566,28 @@ export default function AdminProductsPage() {
               )}
             </div>
             <div className="md:col-span-2">
-              <label className={labelClass}>Descrição / kit de anúncio</label>
+              <div className="mb-1 flex items-center justify-between gap-3">
+                <label className={labelClass}>Descrição / kit de anúncio</label>
+                <button
+                  type="button"
+                  onClick={melhorarComIa}
+                  disabled={iaRodando}
+                  title="A IA reescreve no padrão do Mercado Livre (intro, características, tabela de medidas e garantia)"
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-violet-700 disabled:opacity-50"
+                >
+                  <Sparkles size={13} /> {iaRodando ? 'Gerando...' : 'Melhorar com IA'}
+                </button>
+              </div>
               <textarea
-                rows={3}
+                rows={8}
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
                 placeholder="Características da camiseta, tecido, cuidados..."
                 className={inputClass}
               />
+              <p className="mt-1 text-xs text-slate-400">
+                A IA reescreve no padrão do Mercado Livre: explicativo curto, características, tabela de medidas e garantia de 30 dias. Revise o resultado antes de salvar.
+              </p>
             </div>
             <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
               <input
@@ -574,7 +627,6 @@ export default function AdminProductsPage() {
           </div>
         </form>
       )}
-
       {filtered.length === 0 && !showForm ? (
         <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-white px-6 py-14 text-center">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
@@ -596,6 +648,7 @@ export default function AdminProductsPage() {
               <thead>
                 <tr className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
                   <th className="px-6 py-3">Produto</th>
+                  <th className="px-6 py-3">SKU</th>
                   <th className="px-6 py-3">Categoria</th>
                   <th className="px-6 py-3">Custo</th>
                   <th className="px-6 py-3">Sugerido</th>
@@ -610,11 +663,22 @@ export default function AdminProductsPage() {
                     <td className="px-6 py-3">
                       <div className="flex items-center gap-3">
                         {p.image_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={p.image_url} alt={p.name} className="h-10 w-10 rounded-lg object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => abrirGaleria(p)}
+                            title="Ver fotos em tamanho grande"
+                            className="shrink-0 cursor-zoom-in"
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={p.image_url}
+                              alt={p.name}
+                              className="h-16 w-16 rounded-xl object-cover transition hover:scale-105"
+                            />
+                          </button>
                         ) : (
-                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 text-slate-400">
-                            <Shirt size={18} />
+                          <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
+                            <Shirt size={20} />
                           </div>
                         )}
                         <div>
@@ -626,6 +690,7 @@ export default function AdminProductsPage() {
                         </div>
                       </div>
                     </td>
+                    <td className="px-6 py-3 text-xs text-slate-500">{p.sku || '—'}</td>
                     <td className="px-6 py-3 text-slate-500">{p.category || '—'}</td>
                     <td className="px-6 py-3">{formatBRL(p.base_cost)}</td>
                     <td className="px-6 py-3">{formatBRL(p.suggested_price)}</td>
@@ -683,6 +748,57 @@ export default function AdminProductsPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+      {/* ===== VISUALIZADOR DE FOTOS (lightbox) ===== */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setLightbox(null)}
+        >
+          <button
+            type="button"
+            onClick={() => setLightbox(null)}
+            className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white transition hover:bg-white/20"
+            aria-label="Fechar"
+          >
+            <X size={20} />
+          </button>
+          <div
+            className="relative flex max-h-full flex-col items-center gap-3 px-10"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {lightbox.fotos.length > 1 && (
+              <button
+                type="button"
+                onClick={() => setLightbox((l) => ({ ...l, idx: (l.idx - 1 + l.fotos.length) % l.fotos.length }))}
+                className="absolute left-0 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white transition hover:bg-black/70"
+                aria-label="Foto anterior"
+              >
+                <ChevronLeft size={22} />
+              </button>
+            )}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={lightbox.fotos[lightbox.idx]}
+              alt={lightbox.titulo}
+              className="max-h-[78vh] max-w-full rounded-2xl object-contain"
+            />
+            {lightbox.fotos.length > 1 && (
+              <button
+                type="button"
+                onClick={() => setLightbox((l) => ({ ...l, idx: (l.idx + 1) % l.fotos.length }))}
+                className="absolute right-0 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white transition hover:bg-black/70"
+                aria-label="Próxima foto"
+              >
+                <ChevronRight size={22} />
+              </button>
+            )}
+            <p className="text-center text-sm font-medium text-white">
+              {lightbox.titulo}
+              {lightbox.fotos.length > 1 ? ` · ${lightbox.idx + 1} de ${lightbox.fotos.length}` : ''}
+            </p>
           </div>
         </div>
       )}
