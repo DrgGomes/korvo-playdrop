@@ -183,7 +183,7 @@ export default function Page() {
               Do clique à entrega, tudo em um só lugar.<br />Você foca nas vendas, a gente cuida do resto.
             </p>
             <a href="#catalogo" className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-lg bg-cyan-400 px-5 text-xs font-bold text-black shadow-lg shadow-cyan-300/40 transition hover:bg-cyan-300">
-              Quero ver como funciona <ArrowRight size={14} />
+              Quero ver o catálogo <ArrowRight size={14} />
             </a>
           </div>
           <div className="grid flex-1 gap-6 rounded-2xl border border-cyan-100 bg-white p-6 shadow-sm sm:grid-cols-2 lg:grid-cols-4 lg:gap-0 lg:divide-x lg:divide-slate-100">
@@ -236,7 +236,7 @@ export default function Page() {
               </li>
             ))}
           </ul>
-          <a href="https://korvo-playdrop.vercel.app" className="mt-8 inline-flex min-h-12 items-center gap-3 rounded-lg bg-cyan-400 px-6 text-xs font-bold text-black transition hover:bg-cyan-300">
+          <a href="/catalogo" className="mt-8 inline-flex min-h-12 items-center gap-3 rounded-lg bg-cyan-400 px-6 text-xs font-bold text-black transition hover:bg-cyan-300">
             Ver catálogo completo <ArrowRight size={14} />
           </a>
           {/* imagem mobile */}
@@ -316,7 +316,7 @@ export default function Page() {
           </div>
         </div>
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 border-t border-white/5 px-5 py-4 text-[10px] text-slate-500 sm:flex-row">
-          <p>© 2025 PlayDrop. Todos os direitos reservados.</p>
+          <p>© 2026/2027 PlayDrop. Todos os direitos reservados.</p>
           <p>Mais que um sistema. Um ecossistema.</p>
         </div>
       </footer>
