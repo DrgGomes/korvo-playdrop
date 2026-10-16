@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+export const maxDuration = 60
+
 const MODELOS = ['gemini-flash-latest', 'gemini-2.0-flash', 'gemini-2.5-flash']
 
 function montarPrompt(nome, descricao, tamanhos) {
@@ -84,7 +86,7 @@ export async function POST(request) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
+            generationConfig: { temperature: 0.7, maxOutputTokens: 1200 },
           }),
         }
       )
