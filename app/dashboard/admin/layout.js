@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabaseClient'
 import {
   LayoutDashboard, BarChart3, Settings,
   LogOut, Shield, Menu, X, ChevronLeft, ChevronRight, Megaphone,
-  PackageSearch, ShoppingCart, Database
+  PackageSearch, ShoppingCart, Database, Inbox, Package
 } from 'lucide-react'
 
 // Menu exclusivo do admin — sem nada da visão do cliente
@@ -17,6 +17,8 @@ const MENU = [
   { href: '/dashboard/admin/status', label: 'Atualizar pedido', icon: PackageSearch },
   { href: '/dashboard/admin/relatorios', label: 'Relatórios', icon: BarChart3 },
   { href: '/dashboard/admin/avisos', label: 'Avisos', icon: Megaphone },
+  { href: '/dashboard/admin/importados', label: 'Importados', icon: Inbox },
+  { href: '/dashboard/admin/produtos', label: 'Produtos', icon: Package },
   { href: '/dashboard/admin/backup', label: 'Backup', icon: Database },
   { href: '/dashboard/admin/configuracoes', label: 'Configurações', icon: Settings },
 ]
