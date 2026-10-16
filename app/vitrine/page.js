@@ -49,7 +49,7 @@ export default async function VitrinePage() {
             <img src="/logo-playdrop.png" alt="PlayDrop" className="h-10 w-auto" />
           </div>
           <a
-            href="#catalogo"
+            href="/catalogo"
             className="inline-flex min-h-11 items-center rounded-xl bg-indigo-600 px-4 text-sm font-bold transition hover:bg-indigo-500"
           >
             Ver catálogo
@@ -80,7 +80,7 @@ export default async function VitrinePage() {
             </div>
           )}
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <a href="#catalogo" className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-8 text-base font-bold transition hover:bg-indigo-500 sm:w-auto">
+            <a href="/catalogo" className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-8 text-base font-bold transition hover:bg-indigo-500 sm:w-auto">
               Ver catálogo <ArrowDown size={18} />
             </a>
             <a href="https://korvo-playdrop.vercel.app" className="inline-flex min-h-12 w-full items-center justify-center rounded-2xl border border-white/20 px-8 text-base font-bold transition hover:bg-white/10 sm:w-auto">
