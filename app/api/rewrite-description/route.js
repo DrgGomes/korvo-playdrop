@@ -3,8 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 
 export const maxDuration = 60
 
-const MODELOS = ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-2.0-flash']
-const SEM_PENSAMENTO = ['gemini-flash-latest', 'gemini-2.5-flash']
+const API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
 function montarPrompt(nome, descricao, tamanhos) {
   return [
@@ -35,6 +34,39 @@ function montarPrompt(nome, descricao, tamanhos) {
     'DESCRIÇÃO ATUAL:',
     descricao,
   ].join('\n')
+}
+
+// Pontua um modelo: aliases "latest" no topo, depois versões mais novas, flash > lite, estável > preview
+function pesoModelo(nome) {
+  if (nome === 'gemini-flash-latest') return 1000
+  if (nome === 'gemini-flash-lite-latest') return 950
+  const m = nome.match(/gemini-(\d+)(?:\.(\d+))?/)
+  if (!m) return 0
+  let peso = Number(m[1]) * 100 + Number(m[2] || 0) * 10
+  if (nome.includes('lite')) peso -= 5
+  if (nome.includes('preview')) peso -= 10
+  return peso
+}
+
+// Pergunta à API do Gemini quais modelos estão DISPONÍVEIS agora para esta chave
+// e devolve os melhores candidatos de texto rápido (flash), já ordenados.
+async function descobrirModelos(apiKey) {
+  try {
+    const res = await fetch(API_BASE + '/models?pageSize=200&key=' + apiKey)
+    if (!res.ok) return []
+    const data = await res.json()
+    const candidatos = (data.models || [])
+      .filter((m) => (m.supportedGenerationMethods || []).includes('generateContent'))
+      .map((m) => (m.name || '').replace(/^models\//, ''))
+      .filter((n) => n && !/tts|image|embed|aqa|veo|imagen/i.test(n))
+      .filter((n) => n.includes('flash'))
+      .sort((a, b) => pesoModelo(b) - pesoModelo(a))
+    // Nomes estáveis atuais como reserva, caso a descoberta falhe ou volte vazio
+    const reserva = ['gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-flash-latest']
+    return [...new Set([...candidatos, ...reserva])].slice(0, 6)
+  } catch (e) {
+    return ['gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-flash-latest']
+  }
 }
 
 export async function POST(request) {
@@ -77,41 +109,35 @@ export async function POST(request) {
   }
 
   const prompt = montarPrompt(nome, descricao, tamanhos)
-  let ultimoErro = ''
-  for (const modelo of MODELOS) {
+  const modelos = await descobrirModelos(apiKey)
+  const tentados = []
+  for (const modelo of modelos) {
+    tentados.push(modelo)
     try {
-      const res = await fetch(
-        'https://generativelanguage.googleapis.com/v1beta/models/' + modelo + ':generateContent?key=' + apiKey,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {
-              temperature: 0.7,
-              maxOutputTokens: 2048,
-              ...(SEM_PENSAMENTO.includes(modelo) ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
-            },
-          }),
-        }
-      )
-      if (!res.ok) {
-        ultimoErro = 'HTTP ' + res.status
-        continue
-      }
+      const res = await fetch(API_BASE + '/models/' + modelo + ':generateContent?key=' + apiKey, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
+        }),
+      })
+      if (!res.ok) continue // 404/429/etc: tenta o proximo modelo
       const data = await res.json()
       const texto = (data.candidates?.[0]?.content?.parts || [])
         .map((p) => p.text || '')
         .join('')
         .trim()
-      if (!texto) {
-        ultimoErro = 'resposta vazia'
-        continue
+      // Texto completo e util? devolve. Vazio ou curto demais (cortado/pensamento)? proximo modelo.
+      if (texto && texto.length >= 200) {
+        return NextResponse.json({ ok: true, description: texto, modelo_usado: modelo })
       }
-      return NextResponse.json({ ok: true, description: texto })
     } catch (e) {
-      ultimoErro = String(e)
+      // erro de rede neste modelo: tenta o proximo
     }
   }
-  return NextResponse.json({ ok: false, error: 'falha na IA (' + ultimoErro + ')' }, { status: 502 })
+  return NextResponse.json(
+    { ok: false, error: 'Nenhum modelo respondeu agora. Tentados: ' + tentados.join(', ') },
+    { status: 502 }
+  )
 }
