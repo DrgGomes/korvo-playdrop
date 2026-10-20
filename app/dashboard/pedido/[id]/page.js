@@ -218,6 +218,13 @@ export default function OrderDetailPage() {
             >
               <Printer size={15} /> Imprimir cupom
             </button>
+
+            <button
+              onClick={compartilharWhatsApp}
+              className="inline-flex items-center gap-2 rounded-xl bg-[#25D366] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1fbd58]"
+            >
+              <MessageCircle size={15} /> Compartilhar no WhatsApp
+            </button>
           </div>
         </div>
 
