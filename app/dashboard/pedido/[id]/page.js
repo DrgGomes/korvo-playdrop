@@ -8,7 +8,7 @@ import { formatBRL, formatDate, orderStatusLabel, orderStatusColor } from '@/lib
 import {
   ArrowLeft, Printer, Download, Upload, FileText, Package,
   Truck, CheckCircle, XCircle, Clock, User, MapPin, Phone,
-  Hash, Barcode, Camera, FileSpreadsheet, Image, Trash2,
+  Hash, Barcode, Camera, FileSpreadsheet, Image, Trash2, MessageCircle
 } from 'lucide-react'
 
 export default function OrderDetailPage() {
