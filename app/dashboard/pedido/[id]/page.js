@@ -110,8 +110,37 @@ export default function OrderDetailPage() {
     load()
   }
 
-  function handlePrint() {
+    function handlePrint() {
     window.print()
+  }
+
+  // Compartilha o pedido no WhatsApp como cupom de confirmação
+  function compartilharWhatsApp() {
+    if (!order) return
+    const linhas = []
+    linhas.push('*PLAYDROP — CONFIRMAÇÃO DE PEDIDO*')
+    linhas.push('')
+    linhas.push(`*Pedido nº:* #${order.order_number || order.id.slice(0, 8)}`)
+    linhas.push(`*Data:* ${formatDate(order.created_at)}`)
+    linhas.push(`*Cliente:* ${order.customer_name || profile?.name || '—'}`)
+    linhas.push('')
+    linhas.push('--------------------------')
+    linhas.push('*ITENS DO PEDIDO*')
+    linhas.push('--------------------------')
+    items.forEach((i) => {
+      linhas.push(`${i.quantity}x ${i.product_name}`)
+      if (i.size) linhas.push(`Tamanho: ${i.size}`)
+      if (i.color) linhas.push(`Cor: ${i.color}`)
+      linhas.push(formatBRL(Number(i.unit_price || 0) * Number(i.quantity || 1)))
+      linhas.push('')
+    })
+    linhas.push('--------------------------')
+    linhas.push(`*TOTAL: ${formatBRL(Number(order.selling_price || 0))}*`)
+    linhas.push('--------------------------')
+    linhas.push('')
+    linhas.push('Favor confirmar o recebimento deste pedido para separação.')
+    const texto = encodeURIComponent(linhas.join('\n'))
+    window.open('https://wa.me/?text=' + texto, '_blank')
   }
 
   // Gera um código de barras numérico a partir do ID do pedido
