@@ -744,16 +744,9 @@ export default function CatalogoPage() {
                   addedOk ? 'bg-emerald-600' : 'bg-indigo-600 hover:bg-indigo-700'
                 } disabled:opacity-50`}
               >
-                {addedOk ? (
-                  <>
-                    <Check size={16} /> Adicionado ao carrinho!
-                  </>
-                ) : (
-                  <>
-                    <ShoppingCart size={16} />
-                    {adding ? 'Adicionando...' : `Adicionar ${gridTotal > 0 ? `${gridTotal} peça(s)` : 'ao carrinho'}`}
-                  </>
-                )}
+                                {addedOk && <Check size={16} />}
+                {!addedOk && <ShoppingCart size={16} />}
+                <span>{addedOk ? 'Adicionado ao carrinho!' : gridLabel}</span>
               </button>
             </div>
           </div>
