@@ -206,7 +206,8 @@ export default function CatalogoPage() {
     setQtyGrid({})
   }
 
-  const gridTotal = Object.values(qtyGrid).reduce((s, q) => s + Number(q || 0), 0)
+    const gridTotal = Object.values(qtyGrid).reduce((s, q) => s + Number(q || 0), 0)
+  const gridLabel = adding ? 'Adicionando...' : gridTotal > 0 ? 'Adicionar ' + gridTotal + ' peça(s)' : 'Adicionar ao carrinho'
   const gridCost = orderProduct ? gridTotal * Number(orderProduct.base_cost || 0) : 0
 
   async function addAllToCart() {
