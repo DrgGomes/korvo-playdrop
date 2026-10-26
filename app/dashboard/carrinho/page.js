@@ -92,7 +92,6 @@ export default function CarrinhoPage() {
     const ids = items.map((i) => i.id)
     await supabase.from('cart_items').delete().in('id', ids)
 
-    setSubmitting(false)
     router.push(`/dashboard/pedido/${order.id}`)
   }
 
@@ -216,15 +215,9 @@ export default function CarrinhoPage() {
               disabled={submitting}
               className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-60"
             >
-              {submitting ? (
-                <>
-                  <Check size={16} /> Criando pedido...
-                </>
-              ) : (
-                <>
-                  Finalizar compra <ArrowRight size={16} />
-                </>
-              )}
+                            {submitting && <Check size={16} />}
+              {!submitting && <ArrowRight size={16} />}
+              <span>{submitting ? 'Criando pedido...' : 'Finalizar compra'}</span>
             </button>
 
             <p className="mt-3 text-center text-xs text-slate-400">
